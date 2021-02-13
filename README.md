@@ -19,15 +19,15 @@ func main() {
   pcd := donothing.NewProcedure()
   pcd.Short(`Restore a database backup`)
 
-  pcd.AddStep(func(pcd donothing.Process) {
+  pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("retrieveBackupFile")
     pcd.Short("Retrieve the backup file")
   })
-  pcd.AddStep(func(pcd donothing.Process) {
+  pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("loadBackupData")
     pcd.Short("Load the backup data into the database")
   })
-  pcd.AddStep(func(pcd donothing.Process) {
+  pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("testRestoredData")
     pcd.Short("Check the restored data for consistency")
   })
@@ -92,11 +92,11 @@ func downloadBackupFile() (string, error) {
 }
 
 func main() {
-  ...
-  pcd.AddStep(func(pcd donothing.Process) {
+  // ...
+  pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("retrieveBackupFile")
     pcd.Short("Retrieve the backup file")
-    pcd.Run(func(pcd donothing.Process)) error {
+    pcd.Run(func(pcd donothing.Procedure)) error {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
@@ -104,7 +104,7 @@ func main() {
       pcd.OutputString("backupFilePath", filename)
     }
   })
-  ...
+  // ...
 }
 ```
 
@@ -124,4 +124,124 @@ Press `Enter` when done:
 ```
 
 This paradigm makes it easy to automate the restore procedure piece by piece.
+
+## Inputs and outputs
+
+Sometimes we need to pass information from one step to another. We can do this with step **inputs**
+and **outputs**. Continuing with the database restore example, we can have the first step pass the
+name of our backup file to the second step, so that the second step can print it.
+
+First, we add a template for the `loadBackupData` step by putting the following Markdown into
+`templates/loadBackupData.md`:
+
+```markdown
+Run the following command:
+
+    load_data.sh < {{.Input "backupFilePath"}}
+```
+
+With no further changes, our `main` function currently looks like this:
+
+```go
+func main() {
+  pcd := donothing.NewProcedure()
+  pcd.Short(`Restore a database backup`)
+
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("retrieveBackupFile")
+    pcd.Short("Retrieve the backup file")
+    pcd.Run(func(pcd donothing.Procedure)) error {
+      filename, err := downloadBackupFile()
+      if err != nil {
+        return err
+      }
+      pcd.OutputString("backupFilePath", filename)
+    }
+  })
+
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("loadBackupData")
+    pcd.Short("Load the backup data into the database")
+  })
+
+  // ... further steps
+}
+```
+
+The output from our script will now be:
+
+```markdown
+# Restore a database backup
+
+## Retrieve the backup file
+
+    backupFilePath: ./backup.sql
+
+## Load the backup data into the database
+
+Run the following command:
+
+    load_data.sh < ./backup.sql
+
+Press `Enter` when done:
+```
+
+Now the user doesn't have to construct their own command for the `loadBackupData` step: they can
+just copy and paste the command they need to run. And when it comes time to automate the
+`loadBackupData` step, our new `Run` function can use the `backupFilePath` input as well:
+
+```go
+func main() {
+  // ...
+
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("retrieveBackupFile")
+    pcd.Short("Retrieve the backup file")
+    pcd.Run(func(pcd donothing.Procedure)) error {
+      filename, err := downloadBackupFile()
+      if err != nil {
+        return err
+      }
+      pcd.OutputString("backupFilePath", filename)
+    }
+  })
+
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("loadBackupData")
+    pcd.Short("Load the backup data into the database")
+    pcd.Run(func(pcd donothing.Procedure)) error {
+      backupFilePath, ok := pcd.InputString("backupFilePath")
+      if !ok {
+        return errors.New("Missing required input `backupFilePath`")
+      }
+      err := loadBackupData(backupFilePath)
+      if err != nil {
+        return err
+      }
+      pcd.Log("Data loaded successfully.")
+    }
+  })
+
+  // ...
+}
+```
+
+The output from our script will now look like this:
+
+```markdown
+# Restore a database backup
+
+## Retrieve the backup file
+
+    backupFilePath: ./backup.sql
+
+## Load the backup data into the database
+
+Data loaded successfully.
+
+    load_data.sh < ./backup.sql
+
+## Check the restored data for consistency
+
+Press `Enter` when done:
 ```
