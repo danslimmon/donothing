@@ -31,6 +31,8 @@ func main() {
     pcd.Name("testRestoredData")
     pcd.Short("Check the restored data for consistency")
   })
+
+  pcd.Execute()
 }
 ```
 
@@ -96,12 +98,14 @@ func main() {
   pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("retrieveBackupFile")
     pcd.Short("Retrieve the backup file")
-    pcd.Run(func(pcd donothing.Procedure)) error {
+    pcd.OutputsString("backupFilePath")
+
+    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
       }
-      pcd.OutputString("backupFilePath", filename)
+      return donothing.Outputs{"backupFilePath": filename}, nil
     }
   })
   // ...
@@ -150,7 +154,9 @@ func main() {
   pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("retrieveBackupFile")
     pcd.Short("Retrieve the backup file")
-    pcd.Run(func(pcd donothing.Procedure)) error {
+    pcd.OutputsString("backupFilePath")
+
+    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
@@ -197,28 +203,30 @@ func main() {
   pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("retrieveBackupFile")
     pcd.Short("Retrieve the backup file")
-    pcd.Run(func(pcd donothing.Procedure)) error {
+    pcd.OutputsString("backupFilePath")
+
+    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
       }
-      pcd.OutputString("backupFilePath", filename)
+      return donothing.Outputs{"backupFilePath": filename}, nil
     }
   })
 
   pcd.AddStep(func(pcd donothing.Procedure) {
     pcd.Name("loadBackupData")
     pcd.Short("Load the backup data into the database")
-    pcd.Run(func(pcd donothing.Procedure)) error {
-      backupFilePath, ok := pcd.InputString("backupFilePath")
-      if !ok {
-        return errors.New("Missing required input `backupFilePath`")
-      }
+    // This step has a required string input called `backupFilePath`
+    pcd.InputsString("backupFilePath", true)
+
+    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
+      backupFilePath, _ := inputs.GetString("backupFilePath")
       err := loadBackupData(backupFilePath)
       if err != nil {
         return err
       }
-      pcd.Log("Data loaded successfully.")
+      fmt.Println("Data loaded successfully.")
     }
   })
 
@@ -239,9 +247,93 @@ The output from our script will now look like this:
 
 Data loaded successfully.
 
-    load_data.sh < ./backup.sql
-
 ## Check the restored data for consistency
 
 Press `Enter` when done:
+```
+
+## Generating procedure documentation
+
+`donothing` can print Markdown documentation for a procedure. Going back to our original,
+non-automated database restore example, let's add a `--print` flag to our script:
+
+```go
+package main
+
+import (
+  "os"
+  "github.com/danslimmon/donothing"
+)
+
+func main() {
+  pcd := donothing.NewProcedure()
+  pcd.Short(`Restore a database backup`)
+
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("retrieveBackupFile")
+    pcd.Short("Retrieve the backup file")
+  })
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("loadBackupData")
+    pcd.Short("Load the backup data into the database")
+  })
+  pcd.AddStep(func(pcd donothing.Procedure) {
+    pcd.Name("testRestoredData")
+    pcd.Short("Check the restored data for consistency")
+  })
+
+  if len(os.Args) > 0 && os.Args[1] == "--print" {
+    pcd.Print()
+  } else {
+    pcd.Execute()
+  }
+}
+```
+
+When we invoke our script with the `--print` flag, it will print out our whole procedure as
+Markdown:
+
+```markdown
+# Restore a database backup
+
+## Retrieve the backup file
+
+- Log in to the AWS console
+- Navigate to the `db_backups` S3 bucket
+- Download the `.sql` file you wish to restore
+
+Record the following: 
+
+  - `backupFilePath`
+
+## Load the backup data into the database
+
+Run the following command:
+
+    load_data.sh < [[backupFilePath]]
+
+## Check the restored data for consistency
+
+Log in to the database and make sure we have records up to the timestamp of the backup we just
+restored.
+```
+
+Once a step has been automated through the addition of a `Run` function, the printed documentation
+will no longer contain the Markdown text from the corresponding template. Instead, it will include
+only the step's `Short` description and `Name`. The name can be used to execute the step by itself,
+or to resume the procedure starting at that step. This functionality requires another change to the
+argument parsing section at the end of `main`:
+
+```
+  if len(os.Args) == 0
+    pcd.Execute()
+  } else if os.Args[1] == "--print" {
+    pcd.Print()
+  } else if os.Args[1] == "--resume" {
+    // Pick up the procedure at the step with the given name and continue from there
+    pcd.Resume(os.Args[2])
+  } else if os.Args[1] == "--only" {
+    // Execute the step with the given name and then exit
+    pcd.Only(os.Args[2])
+  }
 ```
