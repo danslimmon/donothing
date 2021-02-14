@@ -38,23 +38,44 @@ func manual() *donothing.Procedure {
 		step.Short("Enter your phone number")
 		step.OutputString(
 			// The name of this output, by which other steps will refer to it
-			"phoneNumber",
+			"PhoneNumber",
 			// A description for this output, which we'll use to prompt the user
 			"Your phone number",
 		)
+		step.Long(`
+			Enter your phone number, without area code. Formatting doesn't matter.
+		`)
 	})
 
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("multiplyPhoneNumber")
 		step.Short("Multiply your phone number by 8")
-		step.OutputString("phoneNumberTimesEight", "Your phone number times 8")
+		step.InputString("PhoneNumber", "Your phone number", true)
+		step.OutputString("PhoneNumberTimesEight", "Your phone number times 8")
+		// The "@@" in this string passed to Long will be placed with a backtick (`).
+		//
+		// A different backtick stand-in can be assigned with Procedure.BacktickStandin().
+		step.Long(`
+			Here is your phone number: @@{{.PhoneNumber}}@@
+
+			Treating your phone number as a single integer, multiply it by 8.
+		`)
 	})
 
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("addDigits")
 		step.Short("Add up the digits")
-		step.InputInt("phoneNumber", "Your phone number", true)
-		step.InputInt("phoneNumberTimesEight", "Your phone number times 8", true)
+		step.InputString("PhoneNumber", "", true)
+		step.InputString("PhoneNumberTimesEight", "", true)
+		step.Long(`
+			Here is your phone number: @@{{.PhoneNumber}}@@
+
+			Here is your phone number times 8: @@{{.PhoneNumberTimesEight}}@@
+
+			Add up all the digits in both numbers, and then add 8 to the result. If the resulting sum
+			has more than one digit, take that sum and add up _its_ digits. Repeat until there's a single
+			digit left. That digit should be 8.
+		`)
 	})
 
 	return pcd

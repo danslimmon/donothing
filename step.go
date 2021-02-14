@@ -16,6 +16,9 @@ type Step struct {
 	name string
 	// The Step's short description, as set by Short()
 	short string
+	// The Step's long description, as set by Long()
+	long string
+
 	// The Step's inputs and outputs, if any
 	inputs  []InputDef
 	outputs []OutputDef
@@ -57,6 +60,18 @@ func (step *Step) Short(s string) {
 	step.short = s
 }
 
+// Long gives the step a long description.
+//
+// The long description will be the body of the step's corresponding section in the rendered
+// markdown document.
+//
+// Before a step is rendered, any occurrences of the "backtick standin sequence" in the long
+// description will be replaced with backtick characters. By default, the backtick standin sequence
+// is "@@". This sequence can be reassigned using Procedure.BacktickStandin().
+func (step *Step) Long(s string) {
+	step.long = s
+}
+
 // AddStep adds a child step to the Step.
 //
 // A new Step will be instantiated and passed to fn, which is responsible for defining the new child
@@ -82,13 +97,13 @@ func (step *Step) OutputString(name string, desc string) {
 	step.outputs = append(step.outputs, output)
 }
 
-// InputInt specifies an integer input taken by the step.
+// InputString specifies a string input taken by the step.
 //
-// If name matches the name of an integer output produced by a previous step, then the input's value
+// If name matches the name of a string output produced by a previous step, then the input's value
 // will be automatically set to the value of that output. Otherwise, the user will be prompted for
 // the input's value.
-func (step *Step) InputInt(name, short string, required bool) {
-	input := NewInputDef("int", name, short, required)
+func (step *Step) InputString(name, short string, required bool) {
+	input := NewInputDef("string", name, short, required)
 	step.inputs = append(step.inputs, input)
 }
 
