@@ -34,6 +34,7 @@ func (pcd *Procedure) AddStep(fn func(*Step)) {
 func (pcd *Procedure) Check() error {
 	return pcd.rootStep.Walk(func(step *Step) error {
 		fmt.Println(step.AbsoluteName())
+		fmt.Println(step.Depth())
 		return nil
 	})
 }

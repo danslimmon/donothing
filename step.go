@@ -52,6 +52,16 @@ func (step *Step) AbsoluteName() string {
 	}, ".")
 }
 
+// Depth returns the step's depth in the tree.
+//
+// The root node's depth is 0, the root node's children are at depth 1, and so on.
+func (step *Step) Depth() int {
+	if step.parent == nil {
+		return 0
+	}
+	return step.parent.Depth() + 1
+}
+
 // Short gives the step a short description.
 //
 // The short description will be the name of the step's corresponding section in the rendered
