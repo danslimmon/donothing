@@ -1,4 +1,4 @@
-// The example package contains an example implementation of a donothing script.
+// This package contains an example implementation of a donothing script.
 //
 // The procedure implemented here is the following little arithmetic trick:
 //
@@ -18,7 +18,7 @@
 //
 // To run through the example code, execute `go build && ./example`. To print the procedure's
 // markdown documentation, run `./example --print`.
-package example
+package main
 
 import (
 	"os"
@@ -53,8 +53,8 @@ func manual() *donothing.Procedure {
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("addDigits")
 		step.Short("Add up the digits")
-		step.InputInt("phoneNumber", true)
-		step.InputInt("phoneNumberTimesEight", true)
+		step.InputInt("phoneNumber", "Your phone number", true)
+		step.InputInt("phoneNumberTimesEight", "Your phone number times 8", true)
 	})
 
 	return pcd
