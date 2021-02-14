@@ -21,6 +21,8 @@
 package example
 
 import (
+	"os"
+
 	"github.com/danslimmon/donothing"
 )
 
@@ -72,6 +74,9 @@ func main() {
 	//pcd := automated()
 
 	if err := pcd.Check(); err != nil {
+		panic(err)
+	}
+	if err := pcd.Render(os.Stdout); err != nil {
 		panic(err)
 	}
 	if err := pcd.Execute(); err != nil {
