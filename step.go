@@ -74,6 +74,16 @@ func (step *Step) InputInt(name, short string, required bool) {
 	step.inputs = append(step.inputs, input)
 }
 
+// Walk visits every step in the tree, calling fn on each.
+//
+// It's a depth-first walk, starting with step itself, then proceeding in sequence through the
+// children of step and their children, recursively. This is the order in which the steps execute
+// when Procedure.Execute() is called, as well as the order in which the steps are rendered into
+// documentation.
+func (step *Step) Walk(fn func(*Step) error) error {
+	return nil
+}
+
 // NewStep returns a new step.
 //
 // Generally, donothing scripts shouldn't call NewStep directly. Instead, they should use
