@@ -1,5 +1,9 @@
 package donothing
 
+import (
+	"strings"
+)
+
 // A Step is an individual action to be performed as part of a procedure.
 //
 // Steps must have a name (specified with Name()) and may have any number of substeps (provided with
@@ -16,8 +20,10 @@ type Step struct {
 	inputs  []InputDef
 	outputs []OutputDef
 
+	// The Step of which this Step is a child. nil if this is the root step.
+	parent *Step
 	// The Step's substeps, if any
-	steps []*Step
+	children []*Step
 }
 
 // Name gives the step a name, which must be unique among siblings.
@@ -30,6 +36,17 @@ type Step struct {
 // "loadData" step, which is a child of the "restoreBackup" step.
 func (step *Step) Name(s string) {
 	step.name = s
+}
+
+// AbsoluteName returns the step's unique name.
+func (step *Step) AbsoluteName() string {
+	if step.parent == nil {
+		return step.name
+	}
+	return strings.Join([]string{
+		step.parent.AbsoluteName(),
+		step.name,
+	}, ".")
 }
 
 // Short gives the step a short description.
@@ -46,8 +63,9 @@ func (step *Step) Short(s string) {
 // step.
 func (step *Step) AddStep(fn func(*Step)) {
 	newStep := NewStep()
+	newStep.parent = step
 	fn(newStep)
-	step.steps = append(step.steps, newStep)
+	step.children = append(step.children, newStep)
 }
 
 // OutputString specifies a string output to be produced by the step.
@@ -80,7 +98,17 @@ func (step *Step) InputInt(name, short string, required bool) {
 // children of step and their children, recursively. This is the order in which the steps execute
 // when Procedure.Execute() is called, as well as the order in which the steps are rendered into
 // documentation.
+//
+// If fn returns an error for any step, Walk immediately exits, returning that error.
 func (step *Step) Walk(fn func(*Step) error) error {
+	if err := fn(step); err != nil {
+		return err
+	}
+	for _, childStep := range step.children {
+		if err := childStep.Walk(fn); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -90,7 +118,7 @@ func (step *Step) Walk(fn func(*Step) error) error {
 // *Procedure.AddStep or *Step.AddStep.
 func NewStep() *Step {
 	step := new(Step)
-	step.steps = make([]*Step, 0)
+	step.children = make([]*Step, 0)
 	step.inputs = make([]InputDef, 0)
 	step.outputs = make([]OutputDef, 0)
 	return step

@@ -1,6 +1,7 @@
 package donothing
 
 import (
+	"fmt"
 	"io"
 )
 
@@ -8,8 +9,8 @@ import (
 type Procedure struct {
 	// The procedure's short description, as provided with Short()
 	short string
-	// The steps in the procedure, in the order they were added
-	steps []*Step
+	// The root step of the procedure, of which all other steps are descendants.
+	rootStep *Step
 }
 
 // Short provides the procedure with a short description.
@@ -24,15 +25,17 @@ func (pcd *Procedure) Short(s string) {
 //
 // A new Step will be instantiated and passed to fn to be defined.
 func (pcd *Procedure) AddStep(fn func(*Step)) {
-	step := NewStep()
-	fn(step)
+	pcd.rootStep.AddStep(fn)
 }
 
 // Check validates that the procedure makes sense.
 //
 // It returns an error if anything's wrong.
 func (pcd *Procedure) Check() error {
-	return nil
+	return pcd.rootStep.Walk(func(step *Step) error {
+		fmt.Println(step.AbsoluteName())
+		return nil
+	})
 }
 
 // Render prints the procedure's Markdown representation to f.
@@ -50,6 +53,7 @@ func (pcd *Procedure) Execute() error {
 // NewProcedure returns a new procedure, ready to be given steps.
 func NewProcedure() *Procedure {
 	pcd := new(Procedure)
-	pcd.steps = make([]*Step, 0)
+	pcd.rootStep = NewStep()
+	pcd.rootStep.Name("root")
 	return pcd
 }
