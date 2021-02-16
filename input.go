@@ -1,25 +1,25 @@
 package donothing
 
-// An OutputDef specifies a value that a step outputs for later consumption by another step.
-type OutputDef struct {
-	// The type for values of the output. Either "string" or "int"
+// An InputDef specifies a value that a step can receive.
+type InputDef struct {
+	// The type for values of the input. Either "string" or "int"
 	valueType string
 
-	// The output's name, which another step can refer to in an InputDef if it wants to use this
-	// output's value as an input.
+	// The input's name.
+	//
+	// If name matches the name of an output from a previous step, then the input will automatically
+	// take the value of that output. Otherwise, the user will be prompted for a value.
 	name string
 
-	// A short description of the output.
-	//
-	// This will be used in the procedure's rendered documentation, and also as part of the prompt
-	// during Procedure.Execute() if the output needs to be provided by the user.
-	short string
+	// Whether the input is required by the step
+	required bool
 }
 
-func NewOutputDef(valueType string, name, short string) OutputDef {
-	return OutputDef{
+// NewInputDef returns an InputDef struct describing a step input.
+func NewInputDef(valueType string, name string, required bool) InputDef {
+	return InputDef{
 		valueType: valueType,
 		name:      name,
-		short:     short,
+		required:  required,
 	}
 }

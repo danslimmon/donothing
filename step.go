@@ -111,7 +111,7 @@ func (step *Step) OutputString(name string, desc string) {
 //
 // name must match the name of a string output from a previous step. If it doesn't, the procedure
 // will fail at the Check step.
-func (step *Step) InputString(name, required bool) {
+func (step *Step) InputString(name string, required bool) {
 	input := NewInputDef("string", name, required)
 	step.inputs = append(step.inputs, input)
 }
