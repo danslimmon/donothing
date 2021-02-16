@@ -109,11 +109,10 @@ func (step *Step) OutputString(name string, desc string) {
 
 // InputString specifies a string input taken by the step.
 //
-// If name matches the name of a string output produced by a previous step, then the input's value
-// will be automatically set to the value of that output. Otherwise, the user will be prompted for
-// the input's value.
-func (step *Step) InputString(name, short string, required bool) {
-	input := NewInputDef("string", name, short, required)
+// name must match the name of a string output from a previous step. If it doesn't, the procedure
+// will fail at the Check step.
+func (step *Step) InputString(name, required bool) {
+	input := NewInputDef("string", name, required)
 	step.inputs = append(step.inputs, input)
 }
 

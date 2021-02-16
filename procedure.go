@@ -1,7 +1,6 @@
 package donothing
 
 import (
-	"fmt"
 	"io"
 )
 
@@ -30,11 +29,21 @@ func (pcd *Procedure) AddStep(fn func(*Step)) {
 
 // Check validates that the procedure makes sense.
 //
-// It returns an error if anything's wrong.
+// It returns an error if anything's wrong. It will fail on any departure from the following
+// expectations:
+//
+//   1. Every step has a unique absolute name with no empty parts.
+//   2. Every step has a short description
+//   3. Every input has a name that matches the name of an output from a previous step.
 func (pcd *Procedure) Check() error {
 	return pcd.rootStep.Walk(func(step *Step) error {
-		fmt.Println(step.AbsoluteName())
-		fmt.Println(step.Depth())
+		//		if err := step.Check(); err != nil {
+		//			fmt.Printf(
+		//				"Error checking step %s with parent %s: %s",
+		//				step.String(),
+		//				err,
+		//			)
+		//		}
 		return nil
 	})
 }
