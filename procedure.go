@@ -1,13 +1,13 @@
 package donothing
 
 import (
+	"errors"
+	"fmt"
 	"io"
 )
 
 // A Procedure is a sequence of Steps that can be executed or rendered to markdown.
 type Procedure struct {
-	// The procedure's short description, as provided with Short()
-	short string
 	// The root step of the procedure, of which all other steps are descendants.
 	rootStep *Step
 }
@@ -17,7 +17,7 @@ type Procedure struct {
 // The short description will be the title of the rendered markdown document when Render is called,
 // so it should be concise and accurate.
 func (pcd *Procedure) Short(s string) {
-	pcd.short = s
+	pcd.rootStep.Short(s)
 }
 
 // AddStep adds a step to the procedure.
@@ -29,23 +29,75 @@ func (pcd *Procedure) AddStep(fn func(*Step)) {
 
 // Check validates that the procedure makes sense.
 //
-// It returns an error if anything's wrong. It will fail on any departure from the following
-// expectations:
+// If problems are found, it returns the list of problems along with an error.
+//
+// It checks the procedure against the following expectations:
 //
 //   1. Every step has a unique absolute name with no empty parts.
 //   2. Every step has a short description
 //   3. Every input has a name that matches the name of an output from a previous step.
-func (pcd *Procedure) Check() error {
-	return pcd.rootStep.Walk(func(step *Step) error {
-		//		if err := step.Check(); err != nil {
-		//			fmt.Printf(
-		//				"Error checking step %s with parent %s: %s",
-		//				step.String(),
-		//				err,
-		//			)
-		//		}
+func (pcd *Procedure) Check() ([]string, error) {
+	steps := make(map[string]*Step)
+	outputs := make(map[string]OutputDef)
+	problems := make([]string, 0)
+
+	err := pcd.rootStep.Walk(func(step *Step) error {
+		absName := step.AbsoluteName()
+		if absName[len(absName)-1:] == "." {
+			if step.parent == nil {
+				// I really hope this never happens. The root step should get its name from
+				// donothing, not from the calling code.
+				problems = append(problems, "Root step does not have name")
+			} else {
+				problems = append(problems, fmt.Sprintf("Child step of '%s' does not have name", step.parent.AbsoluteName()))
+			}
+		}
+
+		if steps[absName] != nil {
+			problems = append(problems, fmt.Sprintf("More than one step with name '%s'", absName))
+		}
+		steps[step.AbsoluteName()] = step
+
+		if step.GetShort() == "" {
+			problems = append(problems, fmt.Sprintf("Step '%s' has no Short value", absName))
+		}
+
+		for _, inputDef := range step.GetInputDefs() {
+			matchingOutputDef, ok := outputs[inputDef.Name]
+			if !ok {
+				problems = append(problems, fmt.Sprintf(
+					"Input '%s' of step '%s' does not refer to an output from any previous step",
+					inputDef.Name,
+					absName,
+				))
+				continue
+			}
+			if matchingOutputDef.ValueType != inputDef.ValueType {
+				problems = append(problems, fmt.Sprintf(
+					"Input '%s' of step '%s' has type '%s', but output '%s' has type '%s'",
+					inputDef.Name,
+					absName,
+					inputDef.ValueType,
+					matchingOutputDef.Name,
+					matchingOutputDef.ValueType,
+				))
+			}
+		}
+
+		for _, outputDef := range step.GetOutputDefs() {
+			outputs[outputDef.Name] = outputDef
+		}
+
 		return nil
 	})
+	if err != nil {
+		return []string{}, fmt.Errorf("Error while checking procedure: %w", err)
+	}
+
+	if len(problems) > 0 {
+		return problems, errors.New("Problems were found in the procedure")
+	}
+	return []string{}, nil
 }
 
 // Render prints the procedure's Markdown representation to f.

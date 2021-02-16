@@ -21,6 +21,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/danslimmon/donothing"
@@ -50,7 +51,7 @@ func manual() *donothing.Procedure {
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("multiplyPhoneNumber")
 		step.Short("Multiply your phone number by 8")
-		step.InputString("PhoneNumber", "Your phone number", true)
+		step.InputString("PhoneNumber", true)
 		step.OutputString("PhoneNumberTimesEight", "Your phone number times 8")
 		// The "@@" in this string passed to Long will be placed with a backtick (`).
 		//
@@ -65,8 +66,8 @@ func manual() *donothing.Procedure {
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("addDigits")
 		step.Short("Add up the digits")
-		step.InputString("PhoneNumber", "", true)
-		step.InputString("PhoneNumberTimesEight", "", true)
+		step.InputString("PhoneNumber", true)
+		step.InputString("PhoneNumberTimesEight", true)
 		step.Long(`
 			Here is your phone number: @@{{.PhoneNumber}}@@
 
@@ -94,7 +95,14 @@ func main() {
 	pcd := manual()
 	//pcd := automated()
 
-	if err := pcd.Check(); err != nil {
+	if problems, err := pcd.Check(); err != nil {
+		if err != nil && len(problems) > 0 {
+			fmt.Printf("Problems were found with the procedure:\n")
+			fmt.Printf("\n")
+			for _, p := range problems {
+				fmt.Printf("- %s\n", p)
+			}
+		}
 		panic(err)
 	}
 	if err := pcd.Render(os.Stdout); err != nil {

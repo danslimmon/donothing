@@ -70,6 +70,11 @@ func (step *Step) Short(s string) {
 	step.short = s
 }
 
+// GetShort returns the step's short description, as set by Short().
+func (step *Step) GetShort() string {
+	return step.short
+}
+
 // Long gives the step a long description.
 //
 // The long description will be the body of the step's corresponding section in the rendered
@@ -107,6 +112,11 @@ func (step *Step) OutputString(name string, desc string) {
 	step.outputs = append(step.outputs, output)
 }
 
+// GetOutputDefs returns the step's output definitions.
+func (step *Step) GetOutputDefs() []OutputDef {
+	return step.outputs
+}
+
 // InputString specifies a string input taken by the step.
 //
 // name must match the name of a string output from a previous step. If it doesn't, the procedure
@@ -114,6 +124,11 @@ func (step *Step) OutputString(name string, desc string) {
 func (step *Step) InputString(name string, required bool) {
 	input := NewInputDef("string", name, required)
 	step.inputs = append(step.inputs, input)
+}
+
+// GetInputDefs returns the step's input definitions.
+func (step *Step) GetInputDefs() []InputDef {
+	return step.inputs
 }
 
 // Walk visits every step in the tree, calling fn on each.
