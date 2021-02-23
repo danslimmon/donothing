@@ -53,12 +53,7 @@ func manual() *donothing.Procedure {
 		step.Short("Multiply your phone number by 8")
 		step.InputString("PhoneNumber", true)
 		step.OutputString("PhoneNumberTimesEight", "Your phone number times 8")
-		// The "@@" in this string passed to Long will be placed with a backtick (`).
-		//
-		// A different backtick stand-in can be assigned with Procedure.BacktickStandin().
 		step.Long(`
-			Here is your phone number: @@{{.PhoneNumber}}@@
-
 			Treating your phone number as a single integer, multiply it by 8.
 		`)
 	})
@@ -69,10 +64,6 @@ func manual() *donothing.Procedure {
 		step.InputString("PhoneNumber", true)
 		step.InputString("PhoneNumberTimesEight", true)
 		step.Long(`
-			Here is your phone number: @@{{.PhoneNumber}}@@
-
-			Here is your phone number times 8: @@{{.PhoneNumberTimesEight}}@@
-
 			Add up all the digits in both numbers, and then add 8 to the result. If the resulting sum
 			has more than one digit, take that sum and add up _its_ digits. Repeat until there's a single
 			digit left. That digit should be 8.

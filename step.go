@@ -1,6 +1,8 @@
 package donothing
 
 import (
+	"regexp"
+	"sort"
 	"strings"
 )
 
@@ -80,11 +82,94 @@ func (step *Step) GetShort() string {
 // The long description will be the body of the step's corresponding section in the rendered
 // markdown document.
 //
+// The argument passed to Long() is massaged in the following way before being saved:
+//
+//   - Any leading or trailing lines that contain only whitespace are removed
+//   - If all remaining non-entirely-whitespace lines have the same whitespace prefix, it's
+//     removed.
+//
+// For example, if you run
+//
+//     step.Long(`
+//	       A long description of my step.
+//
+//         Blah blah blah.
+//
+//             Indented line.
+//     `)
+//
+// The step's long description will be set to
+//
+//     "A long description of my step.\n\nBlah blah blah.\n\n    Indented line."
+//
 // Before a step is rendered, any occurrences of the "backtick standin sequence" in the long
 // description will be replaced with backtick characters. By default, the backtick standin sequence
 // is "@@". This sequence can be reassigned using Procedure.BacktickStandin().
 func (step *Step) Long(s string) {
+	// Trim leading all-whitespace lines
+	r := regexp.MustCompile(`\A\s*\n`)
+	s = r.ReplaceAllString(s, "")
+
+	// Trim trailing all-whitespace lines
+	r = regexp.MustCompile(`\n\s*\n\z`)
+	s = r.ReplaceAllString(s, "\n")
+
+	// Remove any common indentation of the remaining lines
+	s = step.trimCommonIndent(s)
+
 	step.long = s
+}
+
+// trimCommonIndent removes the longest common leading whitespace string from lines in s.
+//
+// For example, if s is "    if (hello) {\n        world\n    }", then trimCommonIndent(s) will
+// return "if (hello) {\n    world\n}".
+//
+// Empty lines are ignored.
+func (step *Step) trimCommonIndent(s string) string {
+	origLines := strings.Split(s, "\n")
+
+	lines := make([]string, 0)
+	for _, line := range strings.Split(s, "\n") {
+		// Filter out empty lines
+		if line != "" {
+			lines = append(lines, line)
+		}
+	}
+	if len(lines) == 0 {
+		return s
+	}
+
+	// Set commonPrefix to the longest common prefix of the strings in lines. commonPrefix may still
+	// contain non-whitespace characters after this stanza.
+	sort.Strings(lines)
+	first := lines[0]
+	last := lines[len(lines)-1]
+	commonPrefix := ""
+	for i := 0; i < len(first) && i < len(last); i++ {
+		if first[i] != last[i] {
+			break
+		}
+		commonPrefix = commonPrefix + first[i:i+1]
+	}
+
+	// Set wsPrefix to the longest whitespace string at the beginning of commonPrefix.
+	r := regexp.MustCompile(`^(\s*)`)
+	wsPrefix := r.FindString(commonPrefix)
+
+	// Strip wsPrefix from all lines in origLines, creating rsltLines
+	rsltLines := make([]string, 0)
+	for _, line := range origLines {
+		remainder := strings.Replace(line, wsPrefix, "", 1)
+		rsltLines = append(rsltLines, remainder)
+	}
+
+	return strings.Join(rsltLines, "\n")
+}
+
+// GetLong returns the step's long description, as set by Long().
+func (step *Step) GetLong() string {
+	return step.long
 }
 
 // AddStep adds a child step to the Step.

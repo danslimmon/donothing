@@ -4,7 +4,40 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
+	"text/template"
 )
+
+const (
+	StepTemplate = `{{.HeaderPrefix}} {{.Title}}
+
+{{.Body}}
+{{- if .InputDefs -}}
+**Inputs**:
+
+{{range .InputDefs}}
+- {{.Name}}
+{{end}}
+
+{{end}}
+{{- if .OutputDefs -}}
+**Outputs**:
+
+{{range .OutputDefs}}
+- **{{.Name}}** ({{.ValueType}}): {{.Short}}
+{{end}}
+
+{{end}}`
+)
+
+// StepTemplateData is the thing that gets passed to a step template on evaluation.
+type StepTemplateData struct {
+	HeaderPrefix string
+	Title        string
+	Body         string
+	InputDefs    []InputDef
+	OutputDefs   []OutputDef
+}
 
 // A Procedure is a sequence of Steps that can be executed or rendered to markdown.
 type Procedure struct {
@@ -102,7 +135,17 @@ func (pcd *Procedure) Check() ([]string, error) {
 
 // Render prints the procedure's Markdown representation to f.
 func (pcd *Procedure) Render(f io.Writer) error {
-	return nil
+	return pcd.rootStep.Walk(func(step *Step) error {
+		tpl := template.Must(template.New(step.AbsoluteName()).Parse(StepTemplate))
+		data := StepTemplateData{
+			HeaderPrefix: strings.Repeat("#", step.Depth()+1),
+			Title:        step.GetShort(),
+			Body:         step.GetLong(),
+			InputDefs:    step.GetInputDefs(),
+			OutputDefs:   step.GetOutputDefs(),
+		}
+		return tpl.Execute(f, data)
+	})
 }
 
 // Execute runs through the procedure step by step.
