@@ -111,7 +111,7 @@ func (step *Step) Long(s string) {
 	s = r.ReplaceAllString(s, "")
 
 	// Trim trailing all-whitespace lines
-	r = regexp.MustCompile(`\n\s*\n\z`)
+	r = regexp.MustCompile(`\n\s*\z`)
 	s = r.ReplaceAllString(s, "\n")
 
 	// Remove any common indentation of the remaining lines
