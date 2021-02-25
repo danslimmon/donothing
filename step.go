@@ -110,13 +110,12 @@ func (step *Step) Long(s string) {
 	r := regexp.MustCompile(`\A\s*\n`)
 	s = r.ReplaceAllString(s, "")
 
-	// Trim trailing all-whitespace lines
+	// Trim trailing all-whitespace lines and trailing newline
 	r = regexp.MustCompile(`\n\s*\z`)
-	s = r.ReplaceAllString(s, "\n")
+	s = r.ReplaceAllString(s, "")
 
 	// Remove any common indentation of the remaining lines
 	s = step.trimCommonIndent(s)
-
 	step.long = s
 }
 
@@ -214,6 +213,11 @@ func (step *Step) InputString(name string, required bool) {
 // GetInputDefs returns the step's input definitions.
 func (step *Step) GetInputDefs() []InputDef {
 	return step.inputs
+}
+
+// GetChildren returns the step's child steps.
+func (step *Step) GetChildren() []*Step {
+	return step.children
 }
 
 // Walk visits every step in the tree, calling fn on each.
