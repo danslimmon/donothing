@@ -2,11 +2,13 @@
 
 `donothing` is a Go framework for [do-nothing
 scripting](https://blog.danslimmon.com/2019/07/15/do-nothing-scripting-the-key-to-gradual-automation/).
-Do-nothing scripting is an approach to task automation that lets your processes evolve with minimal
-effort from documented manual processes to fully automated.
+Do-nothing scripting is an approach to writing procedures. It allows you to start with a documented
+manual process and gradually make it better by automating a step at a time. Do-nothing scripting
+aims to minimize the **[activation energy](https://en.wikipedia.org/wiki/Activation_energy)** for
+automating steps of a manual procedure.
 
 A `donothing` script walks through a **procedure**, which comprises a sequence of **steps**. As an
-example, here's a simple procedure for restoring a database backup:
+example, here's a do-nothing procedure for restoring a database backup:
 
 ```go
 package main
@@ -18,18 +20,36 @@ import (
 func main() {
   pcd := donothing.NewProcedure()
   pcd.Short(`Restore a database backup`)
+  pcd.Long(`
+    This is our procedure for restoring a database backup. To familiarize yourself with our database
+    setup, see [the database docs](https://example.com/docs/database.html).
+  `)
 
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("retrieveBackupFile")
-    pcd.Short("Retrieve the backup file")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("retrieveBackupFile")
+    step.Short("Retrieve the backup file")
+    step.Long(`
+      Log in to the [storage control panel](https://example.com/storage/) and locate the latest file
+      of the form "backup_YYYYMMDD.sql". Download that file to your workstation.
+    `)
   })
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("loadBackupData")
-    pcd.Short("Load the backup data into the database")
+
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("loadBackupData")
+    step.Short("Load the backup data into the database")
+    step.Long(`
+      Run this command to load the backup data into the database:
+
+          psql < backup_YYYYMMDD.sql
+    `)
   })
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("testRestoredData")
-    pcd.Short("Check the restored data for consistency")
+
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("testRestoredData")
+    step.Short("Check the restored data for consistency")
+    step.Long(`
+      Log in to the database and make sure there are recent records in the events table.
+    `)
   })
 
   pcd.Execute()
@@ -38,45 +58,36 @@ func main() {
 
 When this code is run, the user will be prompted to follow the instructions step by step:
 
-```markdown
+```
 # Restore a database backup
+
+This is our procedure for restoring a database backup. To familiarize yourself with our database
+setup, see [the database docs](https://example.com/docs/database.html).
+
+[Enter] to begin:
 
 ## Retrieve the backup file
 
-Press `Enter` when done:
+Log in to the [storage control panel](https://example.com/storage/) and locate the latest file
+of the form "backup_YYYYMMDD.sql". Download that file to your workstation.
+
+[Enter] when done:
 
 ## Load the backup data into the database
 
-Press `Enter` when done:
+Run this command to load the backup data into the database:
+
+    psql < backup_YYYYMMDD.sql
+
+[Enter] when done:
 
 ## Check the restored data for consistency
 
-Press `Enter` when done:
+Log in to the database and make sure there are recent records in the events table.
+
+[Enter] when done:
 
 Done!
-```
-
-Details for each step may be added in template files. For example, if we put the following markdown
-into the file `templates/retrieveBackupFile.md`,
-
-```markdown
-- Log in to the AWS console
-- Navigate to the `db_backups` S3 bucket
-- Download the `.sql` file you wish to restore
-```
-
-then, when we run our code, the output will look like this:
-
-```markdown
-# Restore a database backup
-
-## Retrieve the backup file
-
-- Log in to the AWS console
-- Navigate to the `db_backups` S3 bucket
-- Download the `.sql` file you wish to restore
-
-Press `Enter` when done:
 ```
 
 The main idea behind `donothing` is that, when you're ready to automate a step instead of performing
@@ -90,27 +101,31 @@ working directory. We can then automate the first step of our procedure:
 // It returns the path to the local file containing the backup data.
 func downloadBackupFile() (string, error) {
   // ... use the AWS API to download the latest backup file ...
-  return "backup.sql", nil
+  return filename, nil
 }
 
 func main() {
   // ...
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("retrieveBackupFile")
-    pcd.Short("Retrieve the backup file")
-    pcd.OutputsString("backupFilePath")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("retrieveBackupFile")
+    step.Short("Retrieve the backup file")
+    step.HasStringOutput("backupFilePath")
 
-    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
+    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
-        return err
+        return nil, err
       }
-      return donothing.Outputs{"backupFilePath": filename}, nil
+      return &donothing.Outputs{"backupFilePath": filename}, nil
     }
   })
   // ...
 }
 ```
+
+Note that the `retrieveBackupFile` step's `Long()` call has been removed, since it's obsoleted by
+the automation provided by `Run()`. A step _can_ have both `Long()` and `Run()`, but in this case
+it doesn't need to.
 
 Now when we run our script, it will automatically download the backup file from S3, allowing us to
 move on to the second step immediately:
@@ -118,13 +133,25 @@ move on to the second step immediately:
 ```markdown
 # Restore a database backup
 
+This is our procedure for restoring a database backup. To familiarize yourself with our database
+setup, see [the database docs](https://example.com/docs/database.html).
+
+[Enter] to begin:
+
 ## Retrieve the backup file
 
-    backupFilePath: ./backup.sql
+Executing step `retrieveBackupFile` automatically.
+
+**Outputs**:
+  - `backupFilePath`: ./backup_20200226.sql
 
 ## Load the backup data into the database
 
-Press `Enter` when done:
+Run this command to load the backup data into the database:
+
+    psql < backup_YYYYMMDD.sql
+
+[Enter] when done:
 ```
 
 This paradigm makes it easy to automate the restore procedure piece by piece.
@@ -135,39 +162,54 @@ Sometimes we need to pass information from one step to another. We can do this w
 and **outputs**. Continuing with the database restore example, we can have the first step pass the
 name of our backup file to the second step, so that the second step can print it.
 
-First, we add a template for the `loadBackupData` step by putting the following Markdown into
-`templates/loadBackupData.md`:
+First, we modify the long description of the `loadBackupData` step so that it contains new,
+templated instructions.
 
-```markdown
-Run the following command:
+```go
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("loadBackupData")
+    step.Short("Load the backup data into the database")
+    step.Long(`
+      Run this command to load the backup data into the database:
 
-    load_data.sh < {{.Input "backupFilePath"}}
+          psql < {{.Input "backupFilePath"}}
+    `)
+  })
 ```
 
-With no further changes, our `main` function currently looks like this:
+With no further changes, our `main` function now looks like this:
 
 ```go
 func main() {
   pcd := donothing.NewProcedure()
   pcd.Short(`Restore a database backup`)
+  pcd.Long(`
+    This is our procedure for restoring a database backup. To familiarize yourself with our database
+    setup, see [the database docs](https://example.com/docs/database.html).
+  `)
 
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("retrieveBackupFile")
-    pcd.Short("Retrieve the backup file")
-    pcd.OutputsString("backupFilePath")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("retrieveBackupFile")
+    step.Short("Retrieve the backup file")
+    step.HasStringOutput("backupFilePath")
 
-    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
+    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
       }
-      pcd.OutputString("backupFilePath", filename)
+      step.OutputString("backupFilePath", filename)
     }
   })
 
   pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("loadBackupData")
-    pcd.Short("Load the backup data into the database")
+    step.Name("loadBackupData")
+    step.Short("Load the backup data into the database")
+    step.Long(`
+      Run this command to load the backup data into the database:
+
+          psql < {{.Input "backupFilePath"}}
+    `)
   })
 
   // ... further steps
@@ -179,54 +221,64 @@ The output from our script will now be:
 ```markdown
 # Restore a database backup
 
+This is our procedure for restoring a database backup. To familiarize yourself with our database
+setup, see [the database docs](https://example.com/docs/database.html).
+
+[Enter] to begin:
+
 ## Retrieve the backup file
 
-    backupFilePath: ./backup.sql
+Executing step `retrieveBackupFile` automatically.
+
+**Outputs**:
+  - `backupFilePath`: ./backup_20200226.sql
 
 ## Load the backup data into the database
 
-Run the following command:
+Run this command to load the backup data into the database:
 
-    load_data.sh < ./backup.sql
+    psql < ./backup_20200226.sql
 
-Press `Enter` when done:
+[Enter] when done:
+...
 ```
 
 Now the user doesn't have to construct their own command for the `loadBackupData` step: they can
 just copy and paste the command they need to run. And when it comes time to automate the
-`loadBackupData` step, our new `Run` function can use the `backupFilePath` input as well:
+`loadBackupData` step as well, our new `Run` function can use the `backupFilePath` input:
 
 ```go
 func main() {
   // ...
 
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("retrieveBackupFile")
-    pcd.Short("Retrieve the backup file")
-    pcd.OutputsString("backupFilePath")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("retrieveBackupFile")
+    step.Short("Retrieve the backup file")
+    step.HasStringOutput("backupFilePath")
 
-    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
+    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
       filename, err := downloadBackupFile()
       if err != nil {
-        return err
+        return nil, err
       }
-      return donothing.Outputs{"backupFilePath": filename}, nil
+      return &donothing.Outputs{"backupFilePath": filename}, nil
     }
   })
 
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("loadBackupData")
-    pcd.Short("Load the backup data into the database")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("loadBackupData")
+    step.Short("Load the backup data into the database")
     // This step has a required string input called `backupFilePath`
-    pcd.InputsString("backupFilePath", true)
+    step.HasStringInput("backupFilePath", true)
 
-    pcd.Run(func(inputs donothing.Inputs) (donothing.Outputs, error) {
+    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
       backupFilePath, _ := inputs.GetString("backupFilePath")
       err := loadBackupData(backupFilePath)
       if err != nil {
         return err
       }
       fmt.Println("Data loaded successfully.")
+      return nil, nil
     }
   })
 
@@ -239,17 +291,29 @@ The output from our script will now look like this:
 ```markdown
 # Restore a database backup
 
+This is our procedure for restoring a database backup. To familiarize yourself with our database
+setup, see [the database docs](https://example.com/docs/database.html).
+
+[Enter] to begin:
+
 ## Retrieve the backup file
 
-    backupFilePath: ./backup.sql
+Executing step `retrieveBackupFile` automatically.
+
+**Outputs**:
+  - `backupFilePath`: ./backup_20200226.sql
 
 ## Load the backup data into the database
+
+Executing step `loadData` automatically.
 
 Data loaded successfully.
 
 ## Check the restored data for consistency
 
-Press `Enter` when done:
+Log in to the database and make sure there are recent records in the events table.
+
+[Enter] when done:
 ```
 
 ## Generating procedure documentation
@@ -268,22 +332,26 @@ import (
 func main() {
   pcd := donothing.NewProcedure()
   pcd.Short(`Restore a database backup`)
+  pcd.Long(`
+    This is our procedure for restoring a database backup. To familiarize yourself with our database
+    setup, see [the database docs](https://example.com/docs/database.html).
+  `)
 
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("retrieveBackupFile")
-    pcd.Short("Retrieve the backup file")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("retrieveBackupFile")
+    step.Short("Retrieve the backup file")
   })
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("loadBackupData")
-    pcd.Short("Load the backup data into the database")
+  step.AddStep(func(step *donothing.Step) {
+    step.Name("loadBackupData")
+    step.Short("Load the backup data into the database")
   })
-  pcd.AddStep(func(pcd donothing.Procedure) {
-    pcd.Name("testRestoredData")
-    pcd.Short("Check the restored data for consistency")
+  pcd.AddStep(func(step *donothing.Step) {
+    step.Name("testRestoredData")
+    step.Short("Check the restored data for consistency")
   })
 
   if len(os.Args) > 0 && os.Args[1] == "--print" {
-    pcd.Print()
+    pcd.Render()
   } else {
     pcd.Execute()
   }
@@ -296,44 +364,21 @@ Markdown:
 ```markdown
 # Restore a database backup
 
+This is our procedure for restoring a database backup. To familiarize yourself with our database
+setup, see [the database docs](https://example.com/docs/database.html).
+
 ## Retrieve the backup file
 
-- Log in to the AWS console
-- Navigate to the `db_backups` S3 bucket
-- Download the `.sql` file you wish to restore
-
-Record the following: 
-
-  - `backupFilePath`
+Log in to the [storage control panel](https://example.com/storage/) and locate the latest file
+of the form "backup_YYYYMMDD.sql". Download that file to your workstation.
 
 ## Load the backup data into the database
 
-Run the following command:
+Run this command to load the backup data into the database:
 
-    load_data.sh < [[backupFilePath]]
+    psql < backup_YYYYMMDD.sql
 
 ## Check the restored data for consistency
 
-Log in to the database and make sure we have records up to the timestamp of the backup we just
-restored.
-```
-
-Once a step has been automated through the addition of a `Run` function, the printed documentation
-will no longer contain the Markdown text from the corresponding template. Instead, it will include
-only the step's `Short` description and `Name`. The name can be used to execute the step by itself,
-or to resume the procedure starting at that step. This functionality requires another change to the
-argument parsing section at the end of `main`:
-
-```
-  if len(os.Args) == 0
-    pcd.Execute()
-  } else if os.Args[1] == "--print" {
-    pcd.Print()
-  } else if os.Args[1] == "--resume" {
-    // Pick up the procedure at the step with the given name and continue from there
-    pcd.Resume(os.Args[2])
-  } else if os.Args[1] == "--only" {
-    // Execute the step with the given name and then exit
-    pcd.Only(os.Args[2])
-  }
+Log in to the database and make sure there are recent records in the events table.
 ```
