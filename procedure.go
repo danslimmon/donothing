@@ -89,6 +89,17 @@ func (pcd *Procedure) Short(s string) {
 	pcd.rootStep.Short(s)
 }
 
+// Long provides the procedure with a long description.
+//
+// The long description will be shown to the user when they first execute the procedure. It will
+// also be included in the opening section of the procedure's Markdown documentation.
+//
+// It should give an overview of the procedure's purpose and any important assumptions the procedure
+// makes about the state of the world at the beginning of execution.
+func (pcd *Procedure) Long(s string) {
+	pcd.rootStep.Long(s)
+}
+
 // AddStep adds a step to the procedure.
 //
 // A new Step will be instantiated and passed to fn to be defined.
