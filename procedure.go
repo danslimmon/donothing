@@ -27,7 +27,7 @@ const (
 {{if . -}}
 **Inputs**:
 
-{{range .}}    - @@{{.Name}}@@
+{{range .}}  - @@{{.Name}}@@
 {{end}}
 {{end -}}
 
@@ -38,7 +38,7 @@ const (
 {{if . -}}
 **Outputs**:
 
-{{range .}}    - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}
+{{range .}}  - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}
 {{end}}
 {{end -}}
 

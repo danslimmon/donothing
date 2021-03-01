@@ -9,7 +9,7 @@ Enter your phone number, without area code. Formatting doesn't matter.
 
 **Outputs**:
 
-    - `PhoneNumber` (string): Your phone number
+  - `PhoneNumber` (string): Your phone number
 
 ## Multiply your phone number by 8
 
@@ -17,11 +17,11 @@ Treating your phone number as a single integer, multiply it by 8.
 
 **Inputs**:
 
-    - `PhoneNumber`
+  - `PhoneNumber`
 
 **Outputs**:
 
-    - `PhoneNumberTimesEight` (string): Your phone number times 8
+  - `PhoneNumberTimesEight` (string): Your phone number times 8
 
 ## Add up the digits
 
@@ -31,6 +31,6 @@ digit left. That digit should be 8.
 
 **Inputs**:
 
-    - `PhoneNumber`
-    - `PhoneNumberTimesEight`
+  - `PhoneNumber`
+  - `PhoneNumberTimesEight`
 
