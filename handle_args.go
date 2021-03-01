@@ -24,7 +24,7 @@ func (cli *DefaultCLI) Usage() string {
 {{end -}}
 OPTIONS: 
     --markdown    Instead of executing the procedure, print its Markdown documentation to stdout
-	--help        Print usage message`
+    --help        Print usage message`
 	//tpl := template.Must(template.New("usage").Parse(tplStr))
 	tpl, err := template.New("usage").Parse(tplStr)
 	if err != nil {
@@ -38,12 +38,22 @@ OPTIONS:
 	return buf.String()
 }
 
+// Run parses arguments and runs the appropriate actions.
+//
+// args is the content of os.Args.
+func (cli *DefaultCLI) Run(args []string) error {
+	return nil
+}
+
 // NewDefaultCLI returns a DefaultCLI instance initialized with the given executable name.
 //
 // execName is the name of the executable that has imported donothing. pcd is the procedure to run
 // actions against. defaultStep is the step to execute if the user doesn't specify STEP_NAME; if
 // defaultStep is "", omission of STEP_NAME from the invocation will trigger an error.
 func NewDefaultCLI(execName string, pcd *Procedure, defaultStep string) (*DefaultCLI, error) {
+	if pcd == nil {
+		return nil, fmt.Errorf("failed to initialize default CLI: procedure must not be nil")
+	}
 	if _, err := pcd.Check(); err != nil {
 		return nil, err
 	}
