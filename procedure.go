@@ -26,6 +26,7 @@ const (
 {{define "step_inputs" -}}
 {{if . -}}
 **Inputs**:
+
 {{range .}}    - @@{{.Name}}@@
 {{end}}
 {{end -}}
@@ -36,6 +37,7 @@ const (
 {{define "step_outputs" -}}
 {{if . -}}
 **Outputs**:
+
 {{range .}}    - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}
 {{end}}
 {{end -}}
