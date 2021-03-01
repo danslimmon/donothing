@@ -3,7 +3,9 @@ package donothing
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"path"
+	"strings"
 	"text/template"
 )
 
@@ -12,6 +14,9 @@ type DefaultCLI struct {
 	ExecName    string
 	Pcd         *Procedure
 	DefaultStep string
+
+	// The place we'll write output to. Can be swapped out for testing.
+	out io.Writer
 }
 
 // Usage returns the usage message.
@@ -42,6 +47,53 @@ OPTIONS:
 //
 // args is the content of os.Args.
 func (cli *DefaultCLI) Run(args []string) error {
+	if len(args) <= 0 {
+		return fmt.Errorf("Must have at least 1 argument")
+	}
+
+	flags := make([]string, 0)
+	nonFlags := make([]string, 0)
+	for _, arg := range args[1:] {
+		if strings.IndexRune(arg, '-') == 0 {
+			flags = append(flags, arg)
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+	}
+
+	for _, flag := range flags {
+		if flag == "-h" || flag == "--help" {
+			fmt.Fprintln(cli.out, cli.Usage())
+			return nil
+		}
+	}
+
+	// Keys of opts are valid flags. Any other flag is an error.
+	//
+	// At the end of this stanza, the value corresponding to each flag will be true iff the flag was
+	// passed.
+	opts := map[string]bool{
+		"--markdown": false,
+	}
+	for _, flag := range flags {
+		if _, ok := opts[flag]; ok {
+			opts[flag] = true
+		} else {
+			fmt.Fprintln(cli.out, cli.Usage())
+			return fmt.Errorf("Unknown flag '%s'", flag)
+		}
+	}
+
+	if len(nonFlags) == 0 && cli.DefaultStep == "" {
+		fmt.Fprintln(cli.out, cli.Usage())
+		return fmt.Errorf("Must specify STEP_NAME")
+	}
+
+	if len(nonFlags) > 1 {
+		fmt.Fprintln(cli.out, cli.Usage())
+		return fmt.Errorf("Extraneous arguments passed: %v", nonFlags[1:])
+	}
+
 	return nil
 }
 
@@ -76,6 +128,7 @@ func NewDefaultCLI(execName string, pcd *Procedure, defaultStep string) (*Defaul
 // step to execute if the user doesn't specify STEP_NAME; if defaultStep is "", omission of
 // STEP_NAME from the invocation will trigger an error.
 func HandleArgs(args []string, pcd *Procedure, defaultStep string) error {
+	args = args[:]
 	if len(args) <= 0 {
 		return fmt.Errorf("Failed to determine executable name from arguments: args slice too short")
 	}
