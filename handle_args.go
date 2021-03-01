@@ -144,6 +144,6 @@ func HandleArgs(args []string, pcd *Procedure, defaultStep string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(cli.Usage())
-	return nil
+
+	return cli.Run(args)
 }
