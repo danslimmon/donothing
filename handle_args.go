@@ -94,7 +94,15 @@ func (cli *DefaultCLI) Run(args []string) error {
 		return fmt.Errorf("Extraneous arguments passed: %v", nonFlags[1:])
 	}
 
-	return nil
+	stepName := cli.DefaultStep
+	if len(nonFlags) >= 1 {
+		stepName = nonFlags[0]
+	}
+
+	if opts["--markdown"] {
+		return cli.Pcd.RenderStep(cli.out, stepName)
+	}
+	return cli.Pcd.ExecuteStep(stepName)
 }
 
 // NewDefaultCLI returns a DefaultCLI instance initialized with the given executable name.

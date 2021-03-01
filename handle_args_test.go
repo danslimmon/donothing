@@ -53,8 +53,8 @@ OPTIONS:
 	}
 }
 
-// DefaultCLI should print usage when --help is passed
-func TestDefaultCLI_Help(t *testing.T) {
+// DefaultCLI should print usage when --help is passed or the args are wrong.
+func TestDefaultCLI_PrintUsage(t *testing.T) {
 	t.Parallel()
 	assert := assert.New(t)
 
@@ -107,7 +107,107 @@ func TestDefaultCLI_Help(t *testing.T) {
 
 		var buf bytes.Buffer
 		cli.out = &buf
-		assert.Equal(tc.ErrorExp, (cli.Run(tc.Args) != nil))
+		err = cli.Run(tc.Args)
+		if tc.ErrorExp != (err != nil) {
+			if err != nil {
+				t.Logf("cli.Run returned unexpected error '%s'", err.Error())
+				t.Fail()
+			} else {
+				t.Logf("cli.Run should have returned an error but didn't")
+			}
+		}
 		assert.Contains(buf.String(), "USAGE:")
+	}
+}
+
+// DefaultCLI should render a step when --markdown is passed
+func TestDefaultCLI_Render(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	pcd := NewProcedure()
+	pcd.Short("Procedure's short description")
+	pcd.AddStep(func(step *Step) {
+		step.Name("blahBlah")
+		step.Short("the blahBlah step")
+	})
+
+	type testCase struct {
+		// os.Args
+		Args []string
+		// The CLI's default step
+		DefaultStep string
+		// A function that makes assertions about the output of cli.Run
+		Match func(s string)
+		// Whether an error is expected from cli.Run
+		ErrorExp bool
+	}
+
+	testCases := []testCase{
+		testCase{
+			Args:        []string{"foo", "--markdown"},
+			DefaultStep: "root",
+			Match: func(s string) {
+				assert.Contains(s, "Procedure's short description")
+				assert.Contains(s, "the blahBlah step")
+			},
+			ErrorExp: false,
+		},
+		testCase{
+			Args:        []string{"foo", "--markdown"},
+			DefaultStep: "",
+			Match:       func(s string) {},
+			ErrorExp:    true,
+		},
+		testCase{
+			Args:        []string{"foo", "--markdown", "root.blahBlah"},
+			DefaultStep: "",
+			Match: func(s string) {
+				assert.NotContains(s, "Procedure's short description")
+				assert.Contains(s, "the blahBlah step")
+			},
+			ErrorExp: false,
+		},
+		testCase{
+			Args:        []string{"foo", "--markdown"},
+			DefaultStep: "root.blahBlah",
+			Match: func(s string) {
+				assert.NotContains(s, "Procedure's short description")
+				assert.Contains(s, "the blahBlah step")
+			},
+			ErrorExp: false,
+		},
+		testCase{
+			Args:        []string{"foo", "--markdown", "nonexistentStep"},
+			DefaultStep: "",
+			Match:       func(s string) {},
+			ErrorExp:    true,
+		},
+		testCase{
+			Args:        []string{"foo", "--markdown"},
+			DefaultStep: "nonexistentStep",
+			Match:       func(s string) {},
+			ErrorExp:    true,
+		},
+	}
+
+	for i, tc := range testCases {
+		t.Logf("test case %d", i)
+
+		cli, err := NewDefaultCLI("foo", pcd, tc.DefaultStep)
+		assert.Nil(err)
+
+		var buf bytes.Buffer
+		cli.out = &buf
+		err = cli.Run(tc.Args)
+		if tc.ErrorExp != (err != nil) {
+			if err != nil {
+				t.Logf("cli.Run returned unexpected error '%s'", err.Error())
+				t.Fail()
+			} else {
+				t.Logf("cli.Run should have returned an error but didn't")
+			}
+		}
+		tc.Match(buf.String())
 	}
 }

@@ -114,6 +114,30 @@ func (pcd *Procedure) AddStep(fn func(*Step)) {
 	pcd.rootStep.AddStep(fn)
 }
 
+// GetStepByName returns the step with the given (absolute) name.
+func (pcd *Procedure) GetStepByName(stepName string) (*Step, error) {
+	var foundStep *Step
+	err := pcd.rootStep.Walk(func(step *Step) error {
+		absNmae := step.AbsoluteName()
+		if absNmae == stepName {
+			//if step.AbsoluteName() == stepName {
+			foundStep = step
+			// Return error to end walk. This error will be ignored since we have set foundStep to
+			// something other than nil.
+			return fmt.Errorf("")
+		}
+		return nil
+	})
+
+	if foundStep != nil {
+		return foundStep, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return nil, fmt.Errorf("No step with name '%s'", stepName)
+}
+
 // Check validates that the procedure makes sense.
 //
 // If problems are found, it returns the list of problems along with an error.
@@ -192,6 +216,14 @@ func (pcd *Procedure) Check() ([]string, error) {
 // Any occurrence of the string "@@" in the executed template output will be replaced with a
 // backtick.
 func (pcd *Procedure) Render(f io.Writer) error {
+	return pcd.RenderStep(f, "root")
+}
+
+// RenderStep prints the given step from the procedure as Markdown to f.
+//
+// Any occurrence of the string "@@" in the executed template output will be replaced with a
+// backtick.
+func (pcd *Procedure) RenderStep(f io.Writer, stepName string) error {
 	if _, err := pcd.Check(); err != nil {
 		return err
 	}
@@ -201,7 +233,11 @@ func (pcd *Procedure) Render(f io.Writer) error {
 		return err
 	}
 
-	tplData := NewStepTemplateData(pcd.rootStep)
+	step, err := pcd.GetStepByName(stepName)
+	if err != nil {
+		return err
+	}
+	tplData := NewStepTemplateData(step)
 
 	var b strings.Builder
 	err = tpl.Execute(&b, tplData)
@@ -217,6 +253,13 @@ func (pcd *Procedure) Render(f io.Writer) error {
 //
 // The user will be prompted as necessary.
 func (pcd *Procedure) Execute() error {
+	return pcd.ExecuteStep("root")
+}
+
+// ExecuteStep runs through the given step.
+//
+// The user will be prompted as necessary.
+func (pcd *Procedure) ExecuteStep(stepName string) error {
 	return nil
 }
 
