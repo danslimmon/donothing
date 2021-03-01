@@ -33,6 +33,10 @@ import (
 func manual() *donothing.Procedure {
 	pcd := donothing.NewProcedure()
 	pcd.Short("The magic of 8")
+	pcd.Long(`
+		This procedure implements a little arithmetic trick involving some manipulation of the
+		user's phone number.
+	`)
 
 	pcd.AddStep(func(step *donothing.Step) {
 		step.Name("inputPhoneNumber")

@@ -1,5 +1,8 @@
 # The magic of 8
 
+This procedure implements a little arithmetic trick involving some manipulation of the
+user's phone number.
+
 ## Enter your phone number
 
 Enter your phone number, without area code. Formatting doesn't matter.
