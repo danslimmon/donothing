@@ -91,6 +91,11 @@ func (pcd *Procedure) Short(s string) {
 	pcd.rootStep.Short(s)
 }
 
+// GetShort returns the procedure's short description.
+func (pcd *Procedure) GetShort() string {
+	return pcd.rootStep.GetShort()
+}
+
 // Long provides the procedure with a long description.
 //
 // The long description will be shown to the user when they first execute the procedure. It will
