@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 	"path"
 	"strings"
 	"text/template"
@@ -121,6 +122,8 @@ func NewDefaultCLI(execName string, pcd *Procedure, defaultStep string) (*Defaul
 		ExecName:    execName,
 		Pcd:         pcd,
 		DefaultStep: defaultStep,
+
+		out: os.Stdout,
 	}, nil
 }
 
