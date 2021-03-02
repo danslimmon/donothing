@@ -5,77 +5,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"text/template"
 )
-
-const (
-	MarkdownTemplate = `{{define "step" -}}
-{{.HeaderPrefix}} {{.Title}}
-
-{{if .Body}}{{.Body}}
-
-{{end -}}
-
-{{template "step_inputs" .InputDefs -}}
-{{template "step_outputs" .OutputDefs -}}
-
-{{range .Children}}{{template "step" .}}{{end -}}
-{{- /* End {{define}} block */ -}}
-{{end}}
-
-{{define "step_inputs" -}}
-{{if . -}}
-**Inputs**:
-
-{{range .}}  - @@{{.Name}}@@
-{{end}}
-{{end -}}
-
-{{/* End {{define}} block */ -}}
-{{end}}
-
-{{define "step_outputs" -}}
-{{if . -}}
-**Outputs**:
-
-{{range .}}  - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}
-{{end}}
-{{end -}}
-
-{{/* End {{define}} block */ -}}
-{{end}}`
-)
-
-// StepTemplateData is the thing that gets passed to a step template on evaluation.
-type StepTemplateData struct {
-	HeaderPrefix string
-	Title        string
-	Body         string
-	InputDefs    []InputDef
-	OutputDefs   []OutputDef
-	Children     []StepTemplateData
-}
-
-// NewStepTemplateData returns a StepTemplateData instance for the given Step.
-//
-// It is called recursively on children of the Step in order to populate the StepTemplateData's
-// Children attribute.
-func NewStepTemplateData(step *Step) StepTemplateData {
-	td := StepTemplateData{
-		HeaderPrefix: strings.Repeat("#", step.Depth()+1),
-		Title:        step.GetShort(),
-		Body:         step.GetLong(),
-		InputDefs:    step.GetInputDefs(),
-		OutputDefs:   step.GetOutputDefs(),
-		Children:     []StepTemplateData{},
-	}
-
-	for _, c := range step.GetChildren() {
-		td.Children = append(td.Children, NewStepTemplateData(c))
-	}
-
-	return td
-}
 
 // A Procedure is a sequence of Steps that can be executed or rendered to markdown.
 type Procedure struct {
@@ -228,7 +158,7 @@ func (pcd *Procedure) RenderStep(f io.Writer, stepName string) error {
 		return err
 	}
 
-	tpl, err := template.New("step").Parse(MarkdownTemplate)
+	tpl, err := DocTemplate()
 	if err != nil {
 		return err
 	}
