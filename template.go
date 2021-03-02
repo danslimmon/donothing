@@ -14,19 +14,19 @@ var (
 	// TemplateStep is the Markdown template with which we render a Step.
 	//
 	// The input passed as . is an instance of StepTemplateData.
-	TemplateStep string = `{{define "step"}}
-{{.HeaderPrefix}} {{.Title}}
+	TemplateStep string = `{{define "step" -}}
+{{.HeaderPrefix}} {{.Title}}{{if .Body}}
 
-{{if .Body}}{{.Body}}
+{{.Body}}{{end -}}
+{{if .InputDefs}}
 
-{{end -}}
-{{if .InputDefs}}{{template "inputs" .InputDefs}}
+{{template "inputs" .InputDefs}}{{end -}}
+{{if .OutputDefs}}
 
-{{end -}}
-{{if .OutputDefs}}{{template "outputs" .OutputDefs}}
+{{template "outputs" .OutputDefs}}{{end -}}
+{{range .Children}}
 
-{{end -}}
-{{range .Children}}{{template "step" .}}{{end -}}
+{{template "step" .}}{{end -}}
 {{end}}`
 
 	// TemplateInputs is the Markdown template with which we render a Step's InputDefs.

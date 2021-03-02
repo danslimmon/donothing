@@ -33,4 +33,3 @@ digit left. That digit should be 8.
 
   - `PhoneNumber`
   - `PhoneNumberTimesEight`
-
