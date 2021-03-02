@@ -9,7 +9,8 @@ var (
 	// TemplateDoc is the Markdown template with which we render an entire document.
 	//
 	// It takes as . an instance of StepTemplateData.
-	TemplateDoc string = `{{template "step" .}}`
+	TemplateDoc string = `{{template "step" .}}
+`
 
 	// TemplateStep is the Markdown template with which we render a Step.
 	//
