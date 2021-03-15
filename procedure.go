@@ -1,9 +1,11 @@
 package donothing
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -11,6 +13,9 @@ import (
 type Procedure struct {
 	// The root step of the procedure, of which all other steps are descendants.
 	rootStep *Step
+
+	stdin  io.Reader
+	stdout io.Writer
 }
 
 // Short provides the procedure with a short description.
@@ -190,6 +195,24 @@ func (pcd *Procedure) Execute() error {
 //
 // The user will be prompted as necessary.
 func (pcd *Procedure) ExecuteStep(stepName string) error {
+	if _, err := pcd.Check(); err != nil {
+		return err
+	}
+
+	step, err := pcd.GetStepByName(stepName)
+	if err != nil {
+		return err
+	}
+
+	step.Walk(func(step *Step) error {
+		fmt.Fprintln(pcd.stdout, step.GetShort())
+		fmt.Fprintln(pcd.stdout, step.GetLong())
+		fmt.Fprintf(pcd.stdout, "hit enter: ")
+		bufio.NewReader(pcd.stdin).ReadBytes('\n')
+		return nil
+	})
+
+	fmt.Fprintln(pcd.stdout, "Done.")
 	return nil
 }
 
@@ -198,5 +221,7 @@ func NewProcedure() *Procedure {
 	pcd := new(Procedure)
 	pcd.rootStep = NewStep()
 	pcd.rootStep.Name("root")
+	pcd.stdin = os.Stdin
+	pcd.stdout = os.Stdout
 	return pcd
 }
