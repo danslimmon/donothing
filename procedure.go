@@ -1,9 +1,11 @@
 package donothing
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -11,6 +13,9 @@ import (
 type Procedure struct {
 	// The root step of the procedure, of which all other steps are descendants.
 	rootStep *Step
+
+	stdin  io.Reader
+	stdout io.Writer
 }
 
 // Short provides the procedure with a short description.
@@ -167,7 +172,7 @@ func (pcd *Procedure) RenderStep(f io.Writer, stepName string) error {
 	if err != nil {
 		return err
 	}
-	tplData := NewStepTemplateData(step)
+	tplData := NewStepTemplateData(step, true)
 
 	var b strings.Builder
 	err = tpl.Execute(&b, tplData)
@@ -190,6 +195,38 @@ func (pcd *Procedure) Execute() error {
 //
 // The user will be prompted as necessary.
 func (pcd *Procedure) ExecuteStep(stepName string) error {
+	if _, err := pcd.Check(); err != nil {
+		return err
+	}
+
+	step, err := pcd.GetStepByName(stepName)
+	if err != nil {
+		return err
+	}
+
+	tpl, err := ExecTemplate()
+	if err != nil {
+		return err
+	}
+
+	step, err = pcd.GetStepByName(stepName)
+	if err != nil {
+		return err
+	}
+
+	step.Walk(func(walkStep *Step) error {
+		tplData := NewStepTemplateData(walkStep, false)
+		err = tpl.Execute(pcd.stdout, tplData)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(pcd.stdout, "\n\n[Enter] to proceed: ")
+		bufio.NewReader(pcd.stdin).ReadBytes('\n')
+		fmt.Fprintf(pcd.stdout, "\n")
+		return nil
+	})
+
+	fmt.Fprintln(pcd.stdout, "Done.")
 	return nil
 }
 
@@ -198,5 +235,7 @@ func NewProcedure() *Procedure {
 	pcd := new(Procedure)
 	pcd.rootStep = NewStep()
 	pcd.rootStep.Name("root")
+	pcd.stdin = os.Stdin
+	pcd.stdout = os.Stdout
 	return pcd
 }

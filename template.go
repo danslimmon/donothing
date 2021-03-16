@@ -30,6 +30,11 @@ var (
 {{template "step" .}}{{end -}}
 {{end}}`
 
+	// TemplateExecStep is the template we use to render a step when executing a procedure.
+	TemplateExecStep string = `{{.HeaderPrefix}} {{.Title}}{{if .Body}}
+
+{{.Body}}{{end -}}`
+
 	// TemplateInputs is the Markdown template with which we render a Step's InputDefs.
 	//
 	// It's the "**Inputs**" section of a step's documentation. It takes as . a slice of InputDef
@@ -75,6 +80,16 @@ func DocTemplate() (*template.Template, error) {
 	return tpl, nil
 }
 
+// ExecTemplate returns the template for output during procedure execution.
+func ExecTemplate() (*template.Template, error) {
+	tpl := template.New("exec")
+	_, err := tpl.Parse(TemplateExecStep)
+	if err != nil {
+		return nil, err
+	}
+	return tpl, nil
+}
+
 // StepTemplateData is the thing that gets passed to a step template on evaluation.
 type StepTemplateData struct {
 	HeaderPrefix string
@@ -87,20 +102,24 @@ type StepTemplateData struct {
 
 // NewStepTemplateData returns a StepTemplateData instance for the given Step.
 //
-// It is called recursively on children of the Step in order to populate the StepTemplateData's
-// Children attribute.
-func NewStepTemplateData(step *Step) StepTemplateData {
+// If recursive is true, NewStepTemplateData is called recursively on children of the Step in order
+// to populate the StepTemplateData's Children attribute. If recursive is false, the returned
+// StepTemplateData struct will have Children == nil.
+func NewStepTemplateData(step *Step, recursive bool) StepTemplateData {
 	td := StepTemplateData{
 		HeaderPrefix: strings.Repeat("#", step.Depth()+1),
 		Title:        step.GetShort(),
 		Body:         step.GetLong(),
 		InputDefs:    step.GetInputDefs(),
 		OutputDefs:   step.GetOutputDefs(),
-		Children:     []StepTemplateData{},
+		Children:     nil,
 	}
 
-	for _, c := range step.GetChildren() {
-		td.Children = append(td.Children, NewStepTemplateData(c))
+	if recursive {
+		td.Children = make([]StepTemplateData, 0)
+		for _, c := range step.GetChildren() {
+			td.Children = append(td.Children, NewStepTemplateData(c, true))
+		}
 	}
 
 	return td

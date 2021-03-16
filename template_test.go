@@ -351,3 +351,116 @@ body of grandchild 0`,
 		assert.Equal(tc.Out, b.String())
 	}
 }
+
+// TemplateExecStep should render correctly with various inputs.
+//
+// Output from TemplateExecStep should never end with a newline. Spacing will be handled by the
+// caller.
+func TestTemplateExecStep(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	type testCase struct {
+		In  StepTemplateData
+		Out string
+	}
+
+	testCases := []testCase{
+		testCase{
+			In: StepTemplateData{
+				HeaderPrefix: "#",
+				Title:        "blah blah",
+				Body:         "this is the description of my step",
+			},
+			Out: `# blah blah
+
+this is the description of my step`,
+		},
+	}
+
+	tpl, err := template.New("test").Parse(TemplateExecStep)
+	assert.Nil(err)
+
+	for i, tc := range testCases {
+		t.Logf("test case %d", i)
+
+		var b bytes.Buffer
+		err = tpl.Execute(&b, tc.In)
+		assert.Nil(err)
+		assert.Equal(tc.Out, b.String())
+	}
+}
+
+// NewStepTemplateData with recursive=true should return a StepTemplateData with descendants.
+func TestNewStepTemplateData_Recursive(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	// Step with no children. .Children should be an empty slice.
+	{
+		step := NewStep()
+		step.Name("childlessStep")
+		step.Short("fhgwhgads")
+
+		templateData := NewStepTemplateData(step, true)
+
+		assert.Exactly([]StepTemplateData{}, templateData.Children)
+	}
+
+	// Step with children but no grandchildren.
+	{
+		step := NewStep()
+		step.Name("parentStep")
+		step.Short("fhgwhgads")
+		step.AddStep(func(step *Step) {
+			step.Name("child0")
+			step.Short("child 0")
+		})
+		step.AddStep(func(step *Step) {
+			step.Name("child1")
+			step.Short("child 1")
+		})
+
+		templateData := NewStepTemplateData(step, true)
+
+		assert.Equal(2, len(templateData.Children))
+	}
+
+	// Step with a grandchild
+	{
+		step := NewStep()
+		step.Name("grandparentStep")
+		step.Short("fhgwhgads")
+		step.AddStep(func(step *Step) {
+			step.Name("child0")
+			step.Short("child 0")
+			step.AddStep(func(step *Step) {
+				step.Name("grandchild0")
+				step.Short("grandchild 0")
+			})
+		})
+
+		templateData := NewStepTemplateData(step, true)
+
+		assert.Equal(1, len(templateData.Children))
+		assert.Equal(1, len(templateData.Children[0].Children))
+	}
+}
+
+// NewStepTemplateData with recursive=false should return a StepTemplateData with .Children = nil
+func TestNewStepTemplateData_Nonrecursive(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	step := NewStep()
+	step.Name("parentStep")
+	step.Short("fhgwhgads")
+	step.AddStep(func(step *Step) {
+		step.Name("child0")
+		step.Short("child 0")
+	})
+
+	templateData := NewStepTemplateData(step, false)
+
+	assert.Nil(templateData.Children)
+}
