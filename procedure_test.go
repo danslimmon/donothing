@@ -87,7 +87,7 @@ func TestProcedure_ExecuteStep_Single(t *testing.T) {
 	assert := assert.New(t)
 
 	short := "root step"
-	long := "blah blah blah\n\nthis is all very interesting to you"
+	long := "blah blah blah\n\nthis is @@all@@ very interesting to you"
 
 	pcd := NewProcedure()
 	pcd.Short(short)
@@ -106,8 +106,9 @@ func TestProcedure_ExecuteStep_Single(t *testing.T) {
 	//
 	// This will be wrong if the output contains ": " before we're prompted. Cross that bridge
 	// if we come to it.
-	_, err := readThrough(stdoutBufReader, []byte(": "), 5*time.Second)
+	output, err := readThrough(stdoutBufReader, []byte(": "), 5*time.Second)
 	assert.Nil(err)
+	assert.Contains(string(output), "`all`")
 
 	stdinWriter.Write([]byte("\n"))
 

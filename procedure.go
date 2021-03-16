@@ -2,6 +2,7 @@ package donothing
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -216,10 +217,14 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 
 	step.Walk(func(walkStep *Step) error {
 		tplData := NewStepTemplateData(walkStep, false)
-		err = tpl.Execute(pcd.stdout, tplData)
+
+		var b bytes.Buffer
+		err = tpl.Execute(&b, tplData)
 		if err != nil {
 			return err
 		}
+		fmt.Fprintf(pcd.stdout, "%s", strings.Replace(b.String(), "@@", "`", -1))
+
 		fmt.Fprintf(pcd.stdout, "\n\n[Enter] to proceed: ")
 		bufio.NewReader(pcd.stdin).ReadBytes('\n')
 		fmt.Fprintf(pcd.stdout, "\n")
