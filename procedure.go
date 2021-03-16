@@ -172,7 +172,7 @@ func (pcd *Procedure) RenderStep(f io.Writer, stepName string) error {
 	if err != nil {
 		return err
 	}
-	tplData := NewStepTemplateData(step)
+	tplData := NewStepTemplateData(step, true)
 
 	var b strings.Builder
 	err = tpl.Execute(&b, tplData)
@@ -204,11 +204,25 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 		return err
 	}
 
-	step.Walk(func(step *Step) error {
-		fmt.Fprintln(pcd.stdout, step.GetShort())
-		fmt.Fprintln(pcd.stdout, step.GetLong())
-		fmt.Fprintf(pcd.stdout, "hit enter: ")
+	tpl, err := ExecTemplate()
+	if err != nil {
+		return err
+	}
+
+	step, err = pcd.GetStepByName(stepName)
+	if err != nil {
+		return err
+	}
+
+	step.Walk(func(walkStep *Step) error {
+		tplData := NewStepTemplateData(walkStep, false)
+		err = tpl.Execute(pcd.stdout, tplData)
+		if err != nil {
+			return err
+		}
+		fmt.Fprintf(pcd.stdout, "\n\n[Enter] to proceed: ")
 		bufio.NewReader(pcd.stdin).ReadBytes('\n')
+		fmt.Fprintf(pcd.stdout, "\n")
 		return nil
 	})
 
