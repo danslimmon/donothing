@@ -402,6 +402,17 @@ func TestTemplateExecStep(t *testing.T) {
 
 this is the description of my step`,
 		},
+		testCase{
+			In: StepTemplateData{
+				HeaderPrefix: "###",
+				NumericPath:  "0.3",
+				Title:        "step title",
+				Body:         "this is the description of my step",
+			},
+			Out: `### (0.3) step title
+
+this is the description of my step`,
+		},
 	}
 
 	tpl, err := template.New("test").Parse(TemplateExecStep)
