@@ -1,6 +1,7 @@
 package donothing
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -52,6 +53,66 @@ func (step *Step) AbsoluteName() string {
 		step.parent.AbsoluteName(),
 		step.name,
 	}, ".")
+}
+
+// Pos returns the step's position in the tree.
+//
+// The return value is a slice of integers. The first value is the index of step's ancestor in the
+// root step's children slice. The next value is the index of step's next ancestor in THAT
+// ancestor's children slice, and so on.
+//
+// If step does not have a parent (i.e. step is the root step), Pos returns an empty slice.
+//
+// If step cannot be found in its parent's children slice, Pos panics.
+//
+// For example, given this procedure:
+//
+//     pcd := NewProcedure()
+//	   pcd.AddStep(func(step *Step) {
+//         //...
+//	   })
+//	   pcd.AddStep(func(step *Step) {
+//         step.Name("grandparent")
+//         step.AddStep(...)
+//         step.AddStep(...)
+//         step.AddStep(func(step *Step) {
+//			   step.Name("parent")
+//             step.AddStep(func(step *Step) {
+//				   step.Name("myStep")
+//             })
+//		   })
+//	   })
+//
+// Pos would give the following results:
+//
+//     // Returns []int{}
+//     pcd.GetStepByName("root").Pos()
+//     // Returns []int{1}
+//     pcd.GetStepByName("root.grandparent").Pos()
+//     // Returns []int{1,2}
+//     pcd.GetStepByName("root.grandparent.parent").Pos()
+//     // Returns []int{1,2,0}
+//     pcd.GetStepByName("root.grandparent.parent.myStep").Pos()
+func (step *Step) Pos() []int {
+	if step.parent == nil {
+		return []int{}
+	}
+
+	var leafIndex int
+	leafIndex = -1
+	for i, child := range step.parent.children {
+		if child.AbsoluteName() == step.AbsoluteName() {
+			// it me!
+			leafIndex = i
+			break
+		}
+	}
+	if leafIndex == -1 {
+		panic(fmt.Sprintf("step '%s' not found among parent's children", step.AbsoluteName()))
+	}
+
+	parentPos := step.parent.Pos()
+	return append(parentPos, leafIndex)
 }
 
 // Depth returns the step's depth in the tree.

@@ -155,50 +155,54 @@ func TestTemplateStep(t *testing.T) {
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "#",
+				NumericPath:  "3",
 				Title:        "empty step",
 				Body:         "",
 				InputDefs:    []InputDef{},
 				OutputDefs:   []OutputDef{},
 				Children:     []StepTemplateData{},
 			},
-			Out: `# empty step`,
+			Out: `# (3) empty step`,
 		},
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "##",
+				NumericPath:  "3.1",
 				Title:        "step with inputs",
 				Body:         "",
 				InputDefs:    []InputDef{InputDef{}},
 				OutputDefs:   []OutputDef{},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## step with inputs
+			Out: `## (3.1) step with inputs
 
 INPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "##",
+				NumericPath:  "4.1",
 				Title:        "step with outputs",
 				Body:         "",
 				InputDefs:    []InputDef{},
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## step with outputs
+			Out: `## (4.1) step with outputs
 
 OUTPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "##",
+				NumericPath:  "5.9",
 				Title:        "step with both inputs and outputs",
 				Body:         "",
 				InputDefs:    []InputDef{InputDef{}},
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## step with both inputs and outputs
+			Out: `## (5.9) step with both inputs and outputs
 
 INPUTS
 
@@ -207,13 +211,14 @@ OUTPUTS`,
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "##",
+				NumericPath:  "9.2",
 				Title:        "step with body and outputs",
 				Body:         "body of the step",
 				InputDefs:    []InputDef{},
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## step with body and outputs
+			Out: `## (9.2) step with body and outputs
 
 body of the step
 
@@ -222,13 +227,14 @@ OUTPUTS`,
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "##",
+				NumericPath:  "2.6",
 				Title:        "step with body and inputs and outputs",
 				Body:         "body of the step",
 				InputDefs:    []InputDef{InputDef{}},
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## step with body and inputs and outputs
+			Out: `## (2.6) step with body and inputs and outputs
 
 body of the step
 
@@ -240,12 +246,14 @@ OUTPUTS`,
 			In: StepTemplateData{
 				HeaderPrefix: "#",
 				Title:        "step with child",
+				NumericPath:  "2",
 				Body:         "",
 				InputDefs:    []InputDef{},
 				OutputDefs:   []OutputDef{},
 				Children: []StepTemplateData{
 					StepTemplateData{
 						HeaderPrefix: "##",
+						NumericPath:  "2.6",
 						Title:        "child step 0",
 						Body:         "",
 						InputDefs:    []InputDef{},
@@ -254,13 +262,14 @@ OUTPUTS`,
 					},
 				},
 			},
-			Out: `# step with child
+			Out: `# (2) step with child
 
-## child step 0`,
+## (2.6) child step 0`,
 		},
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "#",
+				NumericPath:  "6",
 				Title:        "step with body, outputs, and children with bodies",
 				Body:         "",
 				InputDefs:    []InputDef{},
@@ -268,6 +277,7 @@ OUTPUTS`,
 				Children: []StepTemplateData{
 					StepTemplateData{
 						HeaderPrefix: "##",
+						NumericPath:  "6.0",
 						Title:        "child step 0",
 						Body:         "body of child 0",
 						InputDefs:    []InputDef{},
@@ -276,6 +286,7 @@ OUTPUTS`,
 					},
 					StepTemplateData{
 						HeaderPrefix: "##",
+						NumericPath:  "6.1",
 						Title:        "child step 1",
 						Body:         "body of child 1",
 						InputDefs:    []InputDef{},
@@ -284,21 +295,22 @@ OUTPUTS`,
 					},
 				},
 			},
-			Out: `# step with body, outputs, and children with bodies
+			Out: `# (6) step with body, outputs, and children with bodies
 
 OUTPUTS
 
-## child step 0
+## (6.0) child step 0
 
 body of child 0
 
-## child step 1
+## (6.1) child step 1
 
 body of child 1`,
 		},
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "#",
+				NumericPath:  "5",
 				Title:        "step with grandchildren with bodies",
 				Body:         "",
 				InputDefs:    []InputDef{},
@@ -306,6 +318,7 @@ body of child 1`,
 				Children: []StepTemplateData{
 					StepTemplateData{
 						HeaderPrefix: "##",
+						NumericPath:  "5.3",
 						Title:        "child step 0",
 						Body:         "body of child 0",
 						InputDefs:    []InputDef{},
@@ -313,6 +326,7 @@ body of child 1`,
 						Children: []StepTemplateData{
 							StepTemplateData{
 								HeaderPrefix: "###",
+								NumericPath:  "5.3.5",
 								Title:        "grandchild step 0",
 								Body:         "body of grandchild 0",
 								InputDefs:    []InputDef{},
@@ -323,13 +337,13 @@ body of child 1`,
 					},
 				},
 			},
-			Out: `# step with grandchildren with bodies
+			Out: `# (5) step with grandchildren with bodies
 
-## child step 0
+## (5.3) child step 0
 
 body of child 0
 
-### grandchild step 0
+### (5.3.5) grandchild step 0
 
 body of grandchild 0`,
 		},
@@ -404,6 +418,9 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 
 		templateData := NewStepTemplateData(step, true)
 
+		assert.Equal("#", templateData.HeaderPrefix)
+		assert.Equal("fhgwhgads", templateData.Title)
+		assert.Equal("", templateData.NumericPath)
 		assert.Exactly([]StepTemplateData{}, templateData.Children)
 	}
 
@@ -423,7 +440,22 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 
 		templateData := NewStepTemplateData(step, true)
 
+		assert.Equal("#", templateData.HeaderPrefix)
+		assert.Equal("fhgwhgads", templateData.Title)
+		assert.Equal("", templateData.NumericPath)
 		assert.Equal(2, len(templateData.Children))
+
+		child0 := templateData.Children[0]
+		assert.Equal("##", child0.HeaderPrefix)
+		assert.Equal("child 0", child0.Title)
+		assert.Equal("0", child0.NumericPath)
+		assert.Equal(0, len(child0.Children))
+
+		child1 := templateData.Children[1]
+		assert.Equal("##", child1.HeaderPrefix)
+		assert.Equal("child 1", child1.Title)
+		assert.Equal("1", child1.NumericPath)
+		assert.Equal(0, len(child1.Children))
 	}
 
 	// Step with a grandchild
@@ -442,8 +474,23 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 
 		templateData := NewStepTemplateData(step, true)
 
+		assert.Equal("#", templateData.HeaderPrefix)
+		assert.Equal("fhgwhgads", templateData.Title)
+		assert.Equal("", templateData.NumericPath)
 		assert.Equal(1, len(templateData.Children))
 		assert.Equal(1, len(templateData.Children[0].Children))
+
+		child := templateData.Children[0]
+		assert.Equal("##", child.HeaderPrefix)
+		assert.Equal("child 0", child.Title)
+		assert.Equal("0", child.NumericPath)
+		assert.Equal(1, len(child.Children))
+
+		grandchild := child.Children[0]
+		assert.Equal("###", grandchild.HeaderPrefix)
+		assert.Equal("grandchild 0", grandchild.Title)
+		assert.Equal("0.0", grandchild.NumericPath)
+		assert.Equal(0, len(grandchild.Children))
 	}
 }
 
@@ -463,4 +510,13 @@ func TestNewStepTemplateData_Nonrecursive(t *testing.T) {
 	templateData := NewStepTemplateData(step, false)
 
 	assert.Nil(templateData.Children)
+}
+
+func TestPosToNumericPath(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	assert.Equal("", posToNumericPath([]int{}))
+	assert.Equal("0", posToNumericPath([]int{0}))
+	assert.Equal("3.1.4.1.5.9", posToNumericPath([]int{3, 1, 4, 1, 5, 9}))
 }
