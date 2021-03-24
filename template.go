@@ -1,6 +1,7 @@
 package donothing
 
 import (
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -16,7 +17,7 @@ var (
 	//
 	// The input passed as . is an instance of StepTemplateData.
 	TemplateStep string = `{{define "step" -}}
-{{.HeaderPrefix}} {{.Title}}{{if .Body}}
+{{.HeaderPrefix}} ({{.NumericPath}}) {{.Title}}{{if .Body}}
 
 {{.Body}}{{end -}}
 {{if .InputDefs}}
@@ -93,11 +94,23 @@ func ExecTemplate() (*template.Template, error) {
 // StepTemplateData is the thing that gets passed to a step template on evaluation.
 type StepTemplateData struct {
 	HeaderPrefix string
+	NumericPath  string
 	Title        string
 	Body         string
 	InputDefs    []InputDef
 	OutputDefs   []OutputDef
 	Children     []StepTemplateData
+}
+
+// posToNumericPath converts an index slice as produced by Step.Pos to a dot-separated string.
+//
+// If pos is empty, posToNumericPath returns the empty string.
+func posToNumericPath(pos []int) string {
+	sPos := make([]string, len(pos))
+	for i := range pos {
+		sPos[i] = strconv.Itoa(pos[i])
+	}
+	return strings.Join(sPos, ".")
 }
 
 // NewStepTemplateData returns a StepTemplateData instance for the given Step.
@@ -108,6 +121,7 @@ type StepTemplateData struct {
 func NewStepTemplateData(step *Step, recursive bool) StepTemplateData {
 	td := StepTemplateData{
 		HeaderPrefix: strings.Repeat("#", step.Depth()+1),
+		NumericPath:  posToNumericPath(step.Pos()),
 		Title:        step.GetShort(),
 		Body:         step.GetLong(),
 		InputDefs:    step.GetInputDefs(),
