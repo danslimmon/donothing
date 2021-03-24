@@ -28,3 +28,50 @@ func TestTrimCommonIndent(t *testing.T) {
 		assert.Equal(c.Out, (&Step{}).trimCommonIndent(c.In))
 	}
 }
+
+func TestStep_Pos(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	pcd := NewProcedure()
+	pcd.AddStep(func(step *Step) {})
+	pcd.AddStep(func(step *Step) {
+		step.Name("grandparent")
+		step.AddStep(func(step *Step) {})
+		step.AddStep(func(step *Step) {})
+		step.AddStep(func(step *Step) {
+			step.Name("parent")
+			step.AddStep(func(step *Step) {
+				step.Name("myStep")
+			})
+		})
+	})
+
+	must := func(step *Step, err error) *Step {
+		assert.Nil(err)
+		return step
+	}
+
+	assert.Equal([]int{}, must(pcd.GetStepByName("root")).Pos())
+	assert.Equal([]int{1}, must(pcd.GetStepByName("root.grandparent")).Pos())
+	assert.Equal([]int{1, 2}, must(pcd.GetStepByName("root.grandparent.parent")).Pos())
+	assert.Equal([]int{1, 2, 0}, must(pcd.GetStepByName("root.grandparent.parent.myStep")).Pos())
+}
+
+// Pos panics if step's parent's "children" slice doesn't contain step
+func TestStep_Pos_MissingFromParent(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	pcd0 := NewProcedure()
+	pcd1 := NewProcedure()
+	pcd1.AddStep(func(step *Step) {
+		step.Name("foo")
+	})
+	assert.Panics(func() {
+		fooStep, err := pcd1.GetStepByName("root.foo")
+		assert.Nil(err)
+		fooStep.parent = pcd0.rootStep
+		_ = fooStep.Pos()
+	})
+}
