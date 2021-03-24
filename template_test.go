@@ -155,6 +155,18 @@ func TestTemplateStep(t *testing.T) {
 		testCase{
 			In: StepTemplateData{
 				HeaderPrefix: "#",
+				NumericPath:  "",
+				Title:        "root step",
+				Body:         "",
+				InputDefs:    []InputDef{},
+				OutputDefs:   []OutputDef{},
+				Children:     []StepTemplateData{},
+			},
+			Out: `# root step`,
+		},
+		testCase{
+			In: StepTemplateData{
+				HeaderPrefix: "##",
 				NumericPath:  "3",
 				Title:        "empty step",
 				Body:         "",
@@ -162,11 +174,11 @@ func TestTemplateStep(t *testing.T) {
 				OutputDefs:   []OutputDef{},
 				Children:     []StepTemplateData{},
 			},
-			Out: `# (3) empty step`,
+			Out: `## (3) empty step`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "##",
+				HeaderPrefix: "###",
 				NumericPath:  "3.1",
 				Title:        "step with inputs",
 				Body:         "",
@@ -174,13 +186,13 @@ func TestTemplateStep(t *testing.T) {
 				OutputDefs:   []OutputDef{},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## (3.1) step with inputs
+			Out: `### (3.1) step with inputs
 
 INPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "##",
+				HeaderPrefix: "###",
 				NumericPath:  "4.1",
 				Title:        "step with outputs",
 				Body:         "",
@@ -188,13 +200,13 @@ INPUTS`,
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## (4.1) step with outputs
+			Out: `### (4.1) step with outputs
 
 OUTPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "##",
+				HeaderPrefix: "###",
 				NumericPath:  "5.9",
 				Title:        "step with both inputs and outputs",
 				Body:         "",
@@ -202,7 +214,7 @@ OUTPUTS`,
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## (5.9) step with both inputs and outputs
+			Out: `### (5.9) step with both inputs and outputs
 
 INPUTS
 
@@ -210,7 +222,7 @@ OUTPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "##",
+				HeaderPrefix: "###",
 				NumericPath:  "9.2",
 				Title:        "step with body and outputs",
 				Body:         "body of the step",
@@ -218,7 +230,7 @@ OUTPUTS`,
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## (9.2) step with body and outputs
+			Out: `### (9.2) step with body and outputs
 
 body of the step
 
@@ -226,7 +238,7 @@ OUTPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "##",
+				HeaderPrefix: "###",
 				NumericPath:  "2.6",
 				Title:        "step with body and inputs and outputs",
 				Body:         "body of the step",
@@ -234,7 +246,7 @@ OUTPUTS`,
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children:     []StepTemplateData{},
 			},
-			Out: `## (2.6) step with body and inputs and outputs
+			Out: `### (2.6) step with body and inputs and outputs
 
 body of the step
 
@@ -244,7 +256,7 @@ OUTPUTS`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "#",
+				HeaderPrefix: "##",
 				Title:        "step with child",
 				NumericPath:  "2",
 				Body:         "",
@@ -252,7 +264,7 @@ OUTPUTS`,
 				OutputDefs:   []OutputDef{},
 				Children: []StepTemplateData{
 					StepTemplateData{
-						HeaderPrefix: "##",
+						HeaderPrefix: "###",
 						NumericPath:  "2.6",
 						Title:        "child step 0",
 						Body:         "",
@@ -262,13 +274,13 @@ OUTPUTS`,
 					},
 				},
 			},
-			Out: `# (2) step with child
+			Out: `## (2) step with child
 
-## (2.6) child step 0`,
+### (2.6) child step 0`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "#",
+				HeaderPrefix: "##",
 				NumericPath:  "6",
 				Title:        "step with body, outputs, and children with bodies",
 				Body:         "",
@@ -276,7 +288,7 @@ OUTPUTS`,
 				OutputDefs:   []OutputDef{OutputDef{}},
 				Children: []StepTemplateData{
 					StepTemplateData{
-						HeaderPrefix: "##",
+						HeaderPrefix: "###",
 						NumericPath:  "6.0",
 						Title:        "child step 0",
 						Body:         "body of child 0",
@@ -285,7 +297,7 @@ OUTPUTS`,
 						Children:     []StepTemplateData{},
 					},
 					StepTemplateData{
-						HeaderPrefix: "##",
+						HeaderPrefix: "###",
 						NumericPath:  "6.1",
 						Title:        "child step 1",
 						Body:         "body of child 1",
@@ -295,21 +307,21 @@ OUTPUTS`,
 					},
 				},
 			},
-			Out: `# (6) step with body, outputs, and children with bodies
+			Out: `## (6) step with body, outputs, and children with bodies
 
 OUTPUTS
 
-## (6.0) child step 0
+### (6.0) child step 0
 
 body of child 0
 
-## (6.1) child step 1
+### (6.1) child step 1
 
 body of child 1`,
 		},
 		testCase{
 			In: StepTemplateData{
-				HeaderPrefix: "#",
+				HeaderPrefix: "##",
 				NumericPath:  "5",
 				Title:        "step with grandchildren with bodies",
 				Body:         "",
@@ -317,7 +329,7 @@ body of child 1`,
 				OutputDefs:   []OutputDef{},
 				Children: []StepTemplateData{
 					StepTemplateData{
-						HeaderPrefix: "##",
+						HeaderPrefix: "###",
 						NumericPath:  "5.3",
 						Title:        "child step 0",
 						Body:         "body of child 0",
@@ -325,7 +337,7 @@ body of child 1`,
 						OutputDefs:   []OutputDef{},
 						Children: []StepTemplateData{
 							StepTemplateData{
-								HeaderPrefix: "###",
+								HeaderPrefix: "####",
 								NumericPath:  "5.3.5",
 								Title:        "grandchild step 0",
 								Body:         "body of grandchild 0",
@@ -337,13 +349,13 @@ body of child 1`,
 					},
 				},
 			},
-			Out: `# (5) step with grandchildren with bodies
+			Out: `## (5) step with grandchildren with bodies
 
-## (5.3) child step 0
+### (5.3) child step 0
 
 body of child 0
 
-### (5.3.5) grandchild step 0
+#### (5.3.5) grandchild step 0
 
 body of grandchild 0`,
 		},
