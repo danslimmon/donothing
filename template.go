@@ -32,7 +32,7 @@ var (
 {{end}}`
 
 	// TemplateExecStep is the template we use to render a step when executing a procedure.
-	TemplateExecStep string = `{{.HeaderPrefix}} {{.Title}}{{if .Body}}
+	TemplateExecStep string = `{{.HeaderPrefix}} {{if .NumericPath}}({{.NumericPath}}) {{end}}{{.Title}}{{if .Body}}
 
 {{.Body}}{{end -}}`
 
