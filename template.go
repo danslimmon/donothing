@@ -17,7 +17,7 @@ var (
 	//
 	// The input passed as . is an instance of StepTemplateData.
 	TemplateStep string = `{{define "step" -}}
-{{.HeaderPrefix}} ({{.NumericPath}}) {{.Title}}{{if .Body}}
+{{.HeaderPrefix}} {{if .NumericPath}}({{.NumericPath}}) {{end}}{{.Title}}{{if .Body}}
 
 {{.Body}}{{end -}}
 {{if .InputDefs}}
