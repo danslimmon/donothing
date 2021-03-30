@@ -178,6 +178,32 @@ func TestTemplateStep(t *testing.T) {
 		},
 		testCase{
 			In: StepTemplateData{
+				Depth:      1,
+				Pos:        []int{3},
+				Title:      "step with parent",
+				Body:       "",
+				InputDefs:  []InputDef{},
+				OutputDefs: []OutputDef{},
+				Parent: &StepTemplateData{
+					Depth:      0,
+					Pos:        []int{},
+					Title:      "root step",
+					Body:       "",
+					InputDefs:  []InputDef{},
+					OutputDefs: []OutputDef{},
+					Parent:     nil,
+					// If this were real, Children would contain "step with parent", but it doesn't
+					// matter for the sake of this test.
+					Children: []StepTemplateData{},
+				},
+				Children: []StepTemplateData{},
+			},
+			Out: `## (3) step with parent
+
+[Up](#root-step)`,
+		},
+		testCase{
+			In: StepTemplateData{
 				Depth:      2,
 				Pos:        []int{3, 1},
 				Title:      "step with inputs",
@@ -442,6 +468,38 @@ func TestStepTemplateData_SectionHeader(t *testing.T) {
 	}
 }
 
+func TestStepTemplateData_Anchor(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	{
+		templateData := StepTemplateData{
+			Depth: 2,
+			Pos:   []int{0, 2},
+			Title: "Short! description of step",
+		}
+		assert.Equal("#02-short-description-of-step", templateData.Anchor())
+	}
+
+	{
+		templateData := StepTemplateData{
+			Depth: 0,
+			Pos:   []int{},
+			Title: "Description of root step!",
+		}
+		assert.Equal("#description-of-root-step", templateData.Anchor())
+	}
+
+	{
+		templateData := StepTemplateData{
+			Depth: 3,
+			Pos:   []int{0, 1, 2},
+			Title: "!",
+		}
+		assert.Equal("#012-", templateData.Anchor())
+	}
+}
+
 // NewStepTemplateData with recursive=true should return a StepTemplateData with descendants.
 func TestNewStepTemplateData_Recursive(t *testing.T) {
 	t.Parallel()
@@ -453,7 +511,7 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 		step.Name("childlessStep")
 		step.Short("fhgwhgads")
 
-		templateData := NewStepTemplateData(step, true)
+		templateData := NewStepTemplateData(step, nil, true)
 
 		assert.Equal(0, templateData.Depth)
 		assert.Equal("fhgwhgads", templateData.Title)
@@ -475,7 +533,7 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 			step.Short("child 1")
 		})
 
-		templateData := NewStepTemplateData(step, true)
+		templateData := NewStepTemplateData(step, nil, true)
 
 		assert.Equal(0, templateData.Depth)
 		assert.Equal("fhgwhgads", templateData.Title)
@@ -509,7 +567,7 @@ func TestNewStepTemplateData_Recursive(t *testing.T) {
 			})
 		})
 
-		templateData := NewStepTemplateData(step, true)
+		templateData := NewStepTemplateData(step, nil, true)
 
 		assert.Equal(0, templateData.Depth)
 		assert.Equal("fhgwhgads", templateData.Title)
@@ -544,7 +602,7 @@ func TestNewStepTemplateData_Nonrecursive(t *testing.T) {
 		step.Short("child 0")
 	})
 
-	templateData := NewStepTemplateData(step, false)
+	templateData := NewStepTemplateData(step, nil, false)
 
 	assert.Nil(templateData.Children)
 }

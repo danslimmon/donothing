@@ -2,6 +2,7 @@ package donothing
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -18,7 +19,9 @@ var (
 	//
 	// The input passed as . is an instance of StepTemplateData.
 	TemplateStep string = `{{define "step" -}}
-{{.SectionHeader}}{{if .Body}}
+{{.SectionHeader}}{{if .ParentAnchor}}
+
+[Up]({{.ParentAnchor}}){{end}}{{if .Body}}
 
 {{.Body}}{{end -}}
 {{if .InputDefs}}
@@ -100,6 +103,7 @@ type StepTemplateData struct {
 	Body       string
 	InputDefs  []InputDef
 	OutputDefs []OutputDef
+	Parent     *StepTemplateData
 	Children   []StepTemplateData
 }
 
@@ -121,12 +125,46 @@ func (td StepTemplateData) SectionHeader() string {
 	return strings.Join(parts, " ")
 }
 
+// ParentAnchor returns an HTML anchor pointing to the parent section.
+//
+// If there is no parent section (because this StepTemplateData came from the root step), returns
+// the empty string.
+func (td StepTemplateData) ParentAnchor() string {
+	if td.Parent == nil {
+		return ""
+	}
+	return td.Parent.Anchor()
+}
+
 // Anchor returns an href for the step's Markdown section.
 //
 // For example, if step.SectionHeader() returns "### (2.1) Blah blah! Blah.", Anchor returns
 // "#2-1-blah-blah-blah".
+//
+// According to the internet, this is (er, was in 2015) the code that GitHub uses to convert section
+// headers to anchors:
+// https://github.com/gjtorikian/html-pipeline/blob/main/lib/html/pipeline/toc_filter.rb
 func (td StepTemplateData) Anchor() string {
-	return ""
+	// Convert header to lowercase
+	s0 := strings.ToLower(td.SectionHeader())
+	// Remove header indicators (e.g. ###)
+	s1 := strings.TrimLeft(s0, "#")
+	// Remove initial space (the space that occurs after the header indicators)
+	s2 := strings.TrimLeft(s1, " ")
+	// Remove any characters that aren't allowed in an anchor
+	s3 := strings.Join(
+		strings.FieldsFunc(
+			s2,
+			func(char rune) bool {
+				return ("" == regexp.MustCompile(`[[:alnum:]- ]`).FindString(string(char)))
+			},
+		),
+		"",
+	)
+	// Replace spaces with hyphens
+	s4 := regexp.MustCompile(`\s+`).ReplaceAllLiteralString(s3, "-")
+	// Prepend #
+	return fmt.Sprintf("#%s", s4)
 }
 
 // numericPathToString renders td.Pos to a dot-separated string.
@@ -145,7 +183,7 @@ func (td StepTemplateData) numericPathToString() string {
 // If recursive is true, NewStepTemplateData is called recursively on children of the Step in order
 // to populate the StepTemplateData's Children attribute. If recursive is false, the returned
 // StepTemplateData struct will have Children == nil.
-func NewStepTemplateData(step *Step, recursive bool) StepTemplateData {
+func NewStepTemplateData(step *Step, parent *StepTemplateData, recursive bool) StepTemplateData {
 	td := StepTemplateData{
 		Depth:      step.Depth(),
 		Pos:        step.Pos(),
@@ -153,13 +191,14 @@ func NewStepTemplateData(step *Step, recursive bool) StepTemplateData {
 		Body:       step.GetLong(),
 		InputDefs:  step.GetInputDefs(),
 		OutputDefs: step.GetOutputDefs(),
+		Parent:     parent,
 		Children:   nil,
 	}
 
 	if recursive {
 		td.Children = make([]StepTemplateData, 0)
 		for _, c := range step.GetChildren() {
-			td.Children = append(td.Children, NewStepTemplateData(c, true))
+			td.Children = append(td.Children, NewStepTemplateData(c, &td, true))
 		}
 	}
 
