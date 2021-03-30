@@ -173,7 +173,7 @@ func (pcd *Procedure) RenderStep(f io.Writer, stepName string) error {
 	if err != nil {
 		return err
 	}
-	tplData := NewStepTemplateData(step, true)
+	tplData := NewStepTemplateData(step, nil, true)
 
 	var b strings.Builder
 	err = tpl.Execute(&b, tplData)
@@ -216,7 +216,7 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 	}
 
 	step.Walk(func(walkStep *Step) error {
-		tplData := NewStepTemplateData(walkStep, false)
+		tplData := NewStepTemplateData(walkStep, nil, false)
 
 		var b bytes.Buffer
 		err = tpl.Execute(&b, tplData)

@@ -1,6 +1,8 @@
 package donothing
 
 import (
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 	"text/template"
@@ -17,7 +19,9 @@ var (
 	//
 	// The input passed as . is an instance of StepTemplateData.
 	TemplateStep string = `{{define "step" -}}
-{{.HeaderPrefix}} {{if .NumericPath}}({{.NumericPath}}) {{end}}{{.Title}}{{if .Body}}
+{{.SectionHeader}}{{if .ParentAnchor}}
+
+[Up]({{.ParentAnchor}}){{end}}{{if .Body}}
 
 {{.Body}}{{end -}}
 {{if .InputDefs}}
@@ -32,7 +36,7 @@ var (
 {{end}}`
 
 	// TemplateExecStep is the template we use to render a step when executing a procedure.
-	TemplateExecStep string = `{{.HeaderPrefix}} {{if .NumericPath}}({{.NumericPath}}) {{end}}{{.Title}}{{if .Body}}
+	TemplateExecStep string = `{{.SectionHeader}}{{if .Body}}
 
 {{.Body}}{{end -}}`
 
@@ -93,22 +97,83 @@ func ExecTemplate() (*template.Template, error) {
 
 // StepTemplateData is the thing that gets passed to a step template on evaluation.
 type StepTemplateData struct {
-	HeaderPrefix string
-	NumericPath  string
-	Title        string
-	Body         string
-	InputDefs    []InputDef
-	OutputDefs   []OutputDef
-	Children     []StepTemplateData
+	Depth      int
+	Pos        []int
+	Title      string
+	Body       string
+	InputDefs  []InputDef
+	OutputDefs []OutputDef
+	Parent     *StepTemplateData
+	Children   []StepTemplateData
 }
 
-// posToNumericPath converts an index slice as produced by Step.Pos to a dot-separated string.
+// SectionHeader returns the header line for the step's section.
 //
-// If pos is empty, posToNumericPath returns the empty string.
-func posToNumericPath(pos []int) string {
-	sPos := make([]string, len(pos))
-	for i := range pos {
-		sPos[i] = strconv.Itoa(pos[i])
+// For example, "## (0.2) Short description of step"
+func (td StepTemplateData) SectionHeader() string {
+	// Header prefix; e.g. "###"
+	parts := []string{strings.Repeat("#", td.Depth+1)}
+
+	// Numeric path part; e.g. "(0.2.1)". Absent if root step.
+	if td.Depth > 0 {
+		parts = append(parts, fmt.Sprintf("(%s)", td.numericPathToString()))
+	}
+
+	// Title part (the step's Short description)
+	parts = append(parts, td.Title)
+
+	return strings.Join(parts, " ")
+}
+
+// ParentAnchor returns an HTML anchor pointing to the parent section.
+//
+// If there is no parent section (because this StepTemplateData came from the root step), returns
+// the empty string.
+func (td StepTemplateData) ParentAnchor() string {
+	if td.Parent == nil {
+		return ""
+	}
+	return td.Parent.Anchor()
+}
+
+// Anchor returns an href for the step's Markdown section.
+//
+// For example, if step.SectionHeader() returns "### (2.1) Blah blah! Blah.", Anchor returns
+// "#2-1-blah-blah-blah".
+//
+// According to the internet, this is (er, was in 2015) the code that GitHub uses to convert section
+// headers to anchors:
+// https://github.com/gjtorikian/html-pipeline/blob/main/lib/html/pipeline/toc_filter.rb
+func (td StepTemplateData) Anchor() string {
+	// Convert header to lowercase
+	s0 := strings.ToLower(td.SectionHeader())
+	// Remove header indicators (e.g. ###)
+	s1 := strings.TrimLeft(s0, "#")
+	// Remove initial space (the space that occurs after the header indicators)
+	s2 := strings.TrimLeft(s1, " ")
+	// Remove any characters that aren't allowed in an anchor
+	s3 := strings.Join(
+		strings.FieldsFunc(
+			s2,
+			func(char rune) bool {
+				return ("" == regexp.MustCompile(`[[:alnum:]- ]`).FindString(string(char)))
+			},
+		),
+		"",
+	)
+	// Replace spaces with hyphens
+	s4 := regexp.MustCompile(`\s+`).ReplaceAllLiteralString(s3, "-")
+	// Prepend #
+	return fmt.Sprintf("#%s", s4)
+}
+
+// numericPathToString renders td.Pos to a dot-separated string.
+//
+// If td.Pos is empty, numericPathToString returns the empty string.
+func (td StepTemplateData) numericPathToString() string {
+	sPos := make([]string, len(td.Pos))
+	for i := range td.Pos {
+		sPos[i] = strconv.Itoa(td.Pos[i])
 	}
 	return strings.Join(sPos, ".")
 }
@@ -118,21 +183,22 @@ func posToNumericPath(pos []int) string {
 // If recursive is true, NewStepTemplateData is called recursively on children of the Step in order
 // to populate the StepTemplateData's Children attribute. If recursive is false, the returned
 // StepTemplateData struct will have Children == nil.
-func NewStepTemplateData(step *Step, recursive bool) StepTemplateData {
+func NewStepTemplateData(step *Step, parent *StepTemplateData, recursive bool) StepTemplateData {
 	td := StepTemplateData{
-		HeaderPrefix: strings.Repeat("#", step.Depth()+1),
-		NumericPath:  posToNumericPath(step.Pos()),
-		Title:        step.GetShort(),
-		Body:         step.GetLong(),
-		InputDefs:    step.GetInputDefs(),
-		OutputDefs:   step.GetOutputDefs(),
-		Children:     nil,
+		Depth:      step.Depth(),
+		Pos:        step.Pos(),
+		Title:      step.GetShort(),
+		Body:       step.GetLong(),
+		InputDefs:  step.GetInputDefs(),
+		OutputDefs: step.GetOutputDefs(),
+		Parent:     parent,
+		Children:   nil,
 	}
 
 	if recursive {
 		td.Children = make([]StepTemplateData, 0)
 		for _, c := range step.GetChildren() {
-			td.Children = append(td.Children, NewStepTemplateData(c, true))
+			td.Children = append(td.Children, NewStepTemplateData(c, &td, true))
 		}
 	}
 
