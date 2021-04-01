@@ -30,6 +30,9 @@ var (
 {{if .OutputDefs}}
 
 {{template "outputs" .OutputDefs}}{{end -}}
+{{if eq .Parent nil}}
+
+{{template "table_of_contents" .Children}}{{end -}}
 {{range .Children}}
 
 {{template "step" .}}{{end -}}
@@ -63,6 +66,16 @@ var (
   - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}{{end -}}
 {{else -}}{{end -}}
 {{end}}`
+
+	// TemplateTableOfContents is the Markdown template with which we render the table of contents.
+	//
+	// It is rendered recursively, taking as . the parent step's Children slice.
+	TemplateTableOfContents string = `{{define "table_of_contents" -}}
+{{if . -}}
+{{range .}}
+{{.TOCIndent}}- [{{.Title}}]({{.Anchor}}){{template "table_of_contents" .Children}}{{end -}}
+{{else -}}{{end -}}
+{{end}}`
 )
 
 // DocTemplate returns the template for a Markdown document.
@@ -75,6 +88,7 @@ func DocTemplate() (*template.Template, error) {
 		TemplateStep,
 		TemplateInputs,
 		TemplateOutputs,
+		TemplateTableOfContents,
 	} {
 		_, err = tpl.Parse(tplDef)
 		if err != nil {
@@ -165,6 +179,11 @@ func (td StepTemplateData) Anchor() string {
 	s4 := regexp.MustCompile(`\s+`).ReplaceAllLiteralString(s3, "-")
 	// Prepend #
 	return fmt.Sprintf("#%s", s4)
+}
+
+// Returns the indent that should prefix the step's table of contents line.
+func (td StepTemplateData) TOCIndent() string {
+	return strings.Repeat("    ", td.Depth-1)
 }
 
 // numericPathToString renders td.Pos to a dot-separated string.

@@ -138,6 +138,94 @@ func TestTemplateOutputs(t *testing.T) {
 	}
 }
 
+// TemplateTableOfContents should render a table of contents.
+//
+// Output from TemplateTableOfContents should never end with a newline. Spacing between sections
+// will be handled by the template that calls it.
+func TestTemplateTableOfContents(t *testing.T) {
+	t.Parallel()
+	assert := assert.New(t)
+
+	type testCase struct {
+		In  []StepTemplateData
+		Out string
+	}
+
+	testCases := []testCase{
+		testCase{
+			In:  []StepTemplateData{},
+			Out: ``,
+		},
+		testCase{
+			In: []StepTemplateData{
+				StepTemplateData{
+					Depth:    1,
+					Pos:      []int{0},
+					Title:    "Hello",
+					Children: []StepTemplateData{},
+				},
+				StepTemplateData{
+					Depth:    1,
+					Pos:      []int{1},
+					Title:    "Goodbye",
+					Children: []StepTemplateData{},
+				},
+			},
+			Out: `
+- [Hello](#0-hello)
+- [Goodbye](#1-goodbye)`,
+		},
+		testCase{
+			In: []StepTemplateData{
+				StepTemplateData{
+					Depth: 1,
+					Pos:   []int{0},
+					Title: "Hello",
+					Children: []StepTemplateData{
+						StepTemplateData{
+							Depth:    2,
+							Pos:      []int{0, 0},
+							Title:    "Hello child",
+							Children: []StepTemplateData{},
+						},
+						StepTemplateData{
+							Depth:    2,
+							Pos:      []int{0, 1},
+							Title:    "Hello other child",
+							Children: []StepTemplateData{},
+						},
+					},
+				},
+				StepTemplateData{
+					Depth:    1,
+					Pos:      []int{1},
+					Title:    "Goodbye",
+					Children: []StepTemplateData{},
+				},
+			},
+			Out: `
+- [Hello](#0-hello)
+    - [Hello child](#00-hello-child)
+    - [Hello other child](#01-hello-other-child)
+- [Goodbye](#1-goodbye)`,
+		},
+	}
+
+	tpl, err := template.New("test").Parse(`{{template "table_of_contents" .}}`)
+	assert.Nil(err)
+	_, err = tpl.Parse(TemplateTableOfContents)
+	assert.Nil(err)
+
+	for i, tc := range testCases {
+		t.Logf("test case %d", i)
+
+		var b bytes.Buffer
+		err = tpl.Execute(&b, tc.In)
+		assert.Nil(err)
+		assert.Equal(tc.Out, b.String())
+	}
+}
+
 // TemplateStep should render correctly with various inputs.
 //
 // Output from TemplateStep should never end with a newline. Spacing between sections will be

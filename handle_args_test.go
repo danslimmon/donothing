@@ -203,7 +203,7 @@ func TestDefaultCLI_Render(t *testing.T) {
 		if tc.ErrorExp != (err != nil) {
 			if err != nil {
 				t.Logf("cli.Run returned unexpected error '%s'", err.Error())
-				t.Fail()
+				t.FailNow()
 			} else {
 				t.Logf("cli.Run should have returned an error but didn't")
 			}
