@@ -60,7 +60,7 @@ func TestTemplateInputs(t *testing.T) {
 
 	tpl, err := template.New("test").Parse(`{{template "inputs" .}}`)
 	assert.Nil(err)
-	_, err = tpl.Parse(TemplateInputs)
+	AddTemplateInputs(tpl)
 	assert.Nil(err)
 
 	for i, tc := range testCases {
@@ -125,7 +125,7 @@ func TestTemplateOutputs(t *testing.T) {
 
 	tpl, err := template.New("test").Parse(`{{template "outputs" .}}`)
 	assert.Nil(err)
-	_, err = tpl.Parse(TemplateOutputs)
+	AddTemplateOutputs(tpl)
 	assert.Nil(err)
 
 	for i, tc := range testCases {
@@ -171,8 +171,7 @@ func TestTemplateTableOfContents(t *testing.T) {
 					Children: []StepTemplateData{},
 				},
 			},
-			Out: `
-- [Hello](#0-hello)
+			Out: `- [Hello](#0-hello)
 - [Goodbye](#1-goodbye)`,
 		},
 		testCase{
@@ -203,8 +202,7 @@ func TestTemplateTableOfContents(t *testing.T) {
 					Children: []StepTemplateData{},
 				},
 			},
-			Out: `
-- [Hello](#0-hello)
+			Out: `- [Hello](#0-hello)
     - [Hello child](#00-hello-child)
     - [Hello other child](#01-hello-other-child)
 - [Goodbye](#1-goodbye)`,
@@ -213,7 +211,7 @@ func TestTemplateTableOfContents(t *testing.T) {
 
 	tpl, err := template.New("test").Parse(`{{template "table_of_contents" .}}`)
 	assert.Nil(err)
-	_, err = tpl.Parse(TemplateTableOfContents)
+	AddTemplateTableOfContents(tpl)
 	assert.Nil(err)
 
 	for i, tc := range testCases {
@@ -248,9 +246,12 @@ func TestTemplateStep(t *testing.T) {
 				Body:       "",
 				InputDefs:  []InputDef{},
 				OutputDefs: []OutputDef{},
+				Parent:     nil,
 				Children:   []StepTemplateData{},
 			},
-			Out: `# root step`,
+			Out: `# root step
+
+TABLE_OF_CONTENTS`,
 		},
 		testCase{
 			In: StepTemplateData{
@@ -477,10 +478,10 @@ body of grandchild 0`,
 
 	tpl, err := template.New("test").Parse(`{{template "step" .}}`)
 	assert.Nil(err)
+	AddTemplateStep(tpl)
 	template.Must(tpl.Parse(`{{define "inputs"}}INPUTS{{end}}`))
 	template.Must(tpl.Parse(`{{define "outputs"}}OUTPUTS{{end}}`))
-	_, err = tpl.Parse(TemplateStep)
-	assert.Nil(err)
+	template.Must(tpl.Parse(`{{define "table_of_contents"}}TABLE_OF_CONTENTS{{end}}`))
 
 	for i, tc := range testCases {
 		t.Logf("test case %d", i)
@@ -529,14 +530,14 @@ this is the description of my step`,
 		},
 	}
 
-	tpl, err := template.New("test").Parse(TemplateExecStep)
-	assert.Nil(err)
+	tpl := template.New("test")
+	AddTemplateExecStep(tpl)
 
 	for i, tc := range testCases {
 		t.Logf("test case %d", i)
 
 		var b bytes.Buffer
-		err = tpl.Execute(&b, tc.In)
+		err := tpl.Execute(&b, tc.In)
 		assert.Nil(err)
 		assert.Equal(tc.Out, b.String())
 	}

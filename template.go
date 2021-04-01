@@ -8,17 +8,19 @@ import (
 	"text/template"
 )
 
-var (
-	// TemplateDoc is the Markdown template with which we render an entire document.
-	//
-	// It takes as . an instance of StepTemplateData.
-	TemplateDoc string = `{{template "step" .}}
+// AddTemplateDoc adds to the given template the overall Markdown doc template.
+func AddTemplateDoc(tpl *template.Template) {
+	txt := `{{template "step" .}}
 `
+	template.Must(tpl.Parse(txt))
+}
 
-	// TemplateStep is the Markdown template with which we render a Step.
-	//
-	// The input passed as . is an instance of StepTemplateData.
-	TemplateStep string = `{{define "step" -}}
+// AddTemplateStep adds to the given template the Markdown template with which we render a Step.
+//
+// The input passed as . is an instance of StepTemplateData.
+func AddTemplateStep(tpl *template.Template) {
+	newTpl := tpl.New("step")
+	txt := `{{define "step" -}}
 {{.SectionHeader}}{{if .ParentAnchor}}
 
 [Up]({{.ParentAnchor}}){{end}}{{if .Body}}
@@ -30,71 +32,87 @@ var (
 {{if .OutputDefs}}
 
 {{template "outputs" .OutputDefs}}{{end -}}
-{{if eq .Parent nil}}
+{{if eq .Depth 0}}
 
 {{template "table_of_contents" .Children}}{{end -}}
 {{range .Children}}
 
 {{template "step" .}}{{end -}}
 {{end}}`
+	template.Must(newTpl.Parse(txt))
+}
 
-	// TemplateExecStep is the template we use to render a step when executing a procedure.
-	TemplateExecStep string = `{{.SectionHeader}}{{if .Body}}
+// AddTemplateExecStep adds to the given template the template that represents a Step in Execute()
+func AddTemplateExecStep(tpl *template.Template) {
+	txt := `{{.SectionHeader}}{{if .Body}}
 
 {{.Body}}{{end -}}`
+	template.Must(tpl.Parse(txt))
+}
 
-	// TemplateInputs is the Markdown template with which we render a Step's InputDefs.
-	//
-	// It's the "**Inputs**" section of a step's documentation. It takes as . a slice of InputDef
-	// instances.
-	TemplateInputs string = `{{define "inputs" -}}
+// AddTemplateInputs adds the step inputs template to the given template.
+//
+// This is the "**Inputs**" section of a step's documentation. It takes as . a slice of InputDef
+// instances.
+func AddTemplateInputs(tpl *template.Template) {
+	newTpl := tpl.New("inputs")
+	txt := `{{define "inputs" -}}
 {{if . -}}
 **Inputs**:
 {{range .}}
   - @@{{.Name}}@@{{end -}}
 {{else}}{{end -}}
 {{end}}`
+	template.Must(newTpl.Parse(txt))
+}
 
-	// TemplateOutputs is the Markdown template with which we render a Step's OutputDefs.
-	//
-	// It's the "**Outputs**" section of a step's documentation. It takes as . a slice of OutputDef
-	// instances.
-	TemplateOutputs string = `{{define "outputs" -}}
+// AddTemplateOutputs adds the step outputs template to the given template.
+//
+// This is the "**Outputs**" section of a step's documentation. It takes as . a slice of OutputDef
+// instances.
+func AddTemplateOutputs(tpl *template.Template) {
+	newTpl := tpl.New("outputs")
+	txt := `{{define "outputs" -}}
 {{if . -}}
 **Outputs**:
 {{range .}}
   - @@{{.Name}}@@ ({{.ValueType}}): {{.Short}}{{end -}}
 {{else -}}{{end -}}
 {{end}}`
+	template.Must(newTpl.Parse(txt))
+}
 
-	// TemplateTableOfContents is the Markdown template with which we render the table of contents.
-	//
-	// It is rendered recursively, taking as . the parent step's Children slice.
-	TemplateTableOfContents string = `{{define "table_of_contents" -}}
+// AddTemplateTableOfContents adds the table of contents template to the given template.
+func AddTemplateTableOfContents(tpl *template.Template) {
+	newTpl := tpl.New("table_of_contents")
+	newTpl.Funcs(template.FuncMap{
+		// We use this to tell whether we're in the last element of a pipeline in order to decide whether to
+		// add a newline.
+		"plus1": func(i int) int {
+			return i + 1
+		},
+	})
+	txt := `{{define "table_of_contents" -}}
 {{if . -}}
-{{range .}}
-{{.TOCIndent}}- [{{.Title}}]({{.Anchor}}){{template "table_of_contents" .Children}}{{end -}}
-{{else -}}{{end -}}
+{{- $n := len . -}}
+{{range $i, $e := . -}}
+{{.TOCIndent}}- [{{.Title}}]({{.Anchor}}){{if $e.Children}}
+{{template "table_of_contents" .Children}}{{end}}{{if lt (plus1 $i) $n}}
+{{end}}{{end -}}
+{{end -}}
 {{end}}`
-)
+	template.Must(newTpl.Parse(txt))
+}
 
 // DocTemplate returns the template for a Markdown document.
 func DocTemplate() (*template.Template, error) {
 	tpl := template.New("doc")
 
-	var err error
-	for _, tplDef := range []string{
-		TemplateDoc,
-		TemplateStep,
-		TemplateInputs,
-		TemplateOutputs,
-		TemplateTableOfContents,
-	} {
-		_, err = tpl.Parse(tplDef)
-		if err != nil {
-			return nil, err
-		}
-	}
+	AddTemplateDoc(tpl)
+	AddTemplateStep(tpl)
+	AddTemplateInputs(tpl)
+	AddTemplateOutputs(tpl)
+	AddTemplateTableOfContents(tpl)
 
 	return tpl, nil
 }
@@ -102,10 +120,7 @@ func DocTemplate() (*template.Template, error) {
 // ExecTemplate returns the template for output during procedure execution.
 func ExecTemplate() (*template.Template, error) {
 	tpl := template.New("exec")
-	_, err := tpl.Parse(TemplateExecStep)
-	if err != nil {
-		return nil, err
-	}
+	AddTemplateExecStep(tpl)
 	return tpl, nil
 }
 
