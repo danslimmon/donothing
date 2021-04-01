@@ -248,9 +248,12 @@ func TestTemplateStep(t *testing.T) {
 				Body:       "",
 				InputDefs:  []InputDef{},
 				OutputDefs: []OutputDef{},
+				Parent:     nil,
 				Children:   []StepTemplateData{},
 			},
-			Out: `# root step`,
+			Out: `# root step
+
+TABLE_OF_CONTENTS`,
 		},
 		testCase{
 			In: StepTemplateData{
@@ -479,6 +482,7 @@ body of grandchild 0`,
 	assert.Nil(err)
 	template.Must(tpl.Parse(`{{define "inputs"}}INPUTS{{end}}`))
 	template.Must(tpl.Parse(`{{define "outputs"}}OUTPUTS{{end}}`))
+	template.Must(tpl.Parse(`{{define "table_of_contents"}}TABLE_OF_CONTENTS{{end}}`))
 	_, err = tpl.Parse(TemplateStep)
 	assert.Nil(err)
 

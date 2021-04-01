@@ -30,7 +30,7 @@ var (
 {{if .OutputDefs}}
 
 {{template "outputs" .OutputDefs}}{{end -}}
-{{if eq .Parent nil}}
+{{if eq .Depth 0}}
 
 {{template "table_of_contents" .Children}}{{end -}}
 {{range .Children}}
