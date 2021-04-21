@@ -9,6 +9,8 @@ user's phone number.
 
 ## (0) Enter your phone number
 
+`root.inputPhoneNumber`
+•
 [Up](#the-magic-of-8)
 
 Enter your phone number, without area code. Formatting doesn't matter.
@@ -19,6 +21,8 @@ Enter your phone number, without area code. Formatting doesn't matter.
 
 ## (1) Multiply your phone number by 8
 
+`root.multiplyPhoneNumber`
+•
 [Up](#the-magic-of-8)
 
 Treating your phone number as a single integer, multiply it by 8.
@@ -33,6 +37,8 @@ Treating your phone number as a single integer, multiply it by 8.
 
 ## (2) Add up the digits
 
+`root.addDigits`
+•
 [Up](#the-magic-of-8)
 
 Add up all the digits in both numbers, and then add 8 to the result. If the resulting sum

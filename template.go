@@ -23,6 +23,8 @@ func AddTemplateStep(tpl *template.Template) {
 	txt := `{{define "step" -}}
 {{.SectionHeader}}{{if .ParentAnchor}}
 
+@@{{.StepName}}@@
+•
 [Up]({{.ParentAnchor}}){{end}}{{if .Body}}
 
 {{.Body}}{{end -}}
@@ -128,6 +130,7 @@ func ExecTemplate() (*template.Template, error) {
 type StepTemplateData struct {
 	Depth      int
 	Pos        []int
+	StepName   string
 	Title      string
 	Body       string
 	InputDefs  []InputDef
@@ -221,6 +224,7 @@ func NewStepTemplateData(step *Step, parent *StepTemplateData, recursive bool) S
 	td := StepTemplateData{
 		Depth:      step.Depth(),
 		Pos:        step.Pos(),
+		StepName:   step.AbsoluteName(),
 		Title:      step.GetShort(),
 		Body:       step.GetLong(),
 		InputDefs:  step.GetInputDefs(),
