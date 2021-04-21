@@ -269,6 +269,7 @@ TABLE_OF_CONTENTS`,
 			In: StepTemplateData{
 				Depth:      1,
 				Pos:        []int{3},
+				StepName:   "root.stepWithParent",
 				Title:      "step with parent",
 				Body:       "",
 				InputDefs:  []InputDef{},
@@ -289,6 +290,8 @@ TABLE_OF_CONTENTS`,
 			},
 			Out: `## (3) step with parent
 
+@@root.stepWithParent@@
+•
 [Up](#root-step)`,
 		},
 		testCase{
