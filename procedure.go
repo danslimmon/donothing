@@ -225,14 +225,64 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 		}
 		fmt.Fprintf(pcd.stdout, "%s", strings.Replace(b.String(), "@@", "`", -1))
 
-		fmt.Fprintf(pcd.stdout, "\n\n[Enter] to proceed: ")
-		bufio.NewReader(pcd.stdin).ReadBytes('\n')
-		fmt.Fprintf(pcd.stdout, "\n")
+		pcd.prompt()
 		return nil
 	})
 
 	fmt.Fprintln(pcd.stdout, "Done.")
 	return nil
+}
+
+// promptResult is the struct returned by Procedure.prompt.
+//
+// Procedure.Execute uses the contents of a promptResult to decide what to do next.
+type promptResult struct {
+	// The absolute name of the next step that should be executed.
+	//
+	// If empty, Execute should proceed normally in its walk.
+	NextStep string
+}
+
+// prompt prompts the user for the next action to take.
+//
+// If the user enters an invalid choice, prompt will inform them of this and re-prompt until a valid
+// choice is entered.
+func (pcd *Procedure) prompt() promptResult {
+	// promptOnce prompts the user for input. It returns their input, trimmed of leading and
+	// trailing whitespace.
+	promptOnce := func() (string, error) {
+		fmt.Fprintf(pcd.stdout, "\n\n[Enter] to proceed (or \"help\"): ")
+		entry, err := bufio.NewReader(pcd.stdin).ReadBytes('\n')
+		fmt.Fprintf(pcd.stdout, "\n")
+		return strings.TrimSpace(string(entry)), err
+	}
+
+	for {
+		entry, err := promptOnce()
+		if err != nil {
+			fmt.Fprintf(pcd.stdout, "Error reading input: %s\n", err.Error())
+			continue
+		}
+
+		switch entry {
+		case "":
+			// Proceed to the next step as normal
+			return promptResult{}
+		case "help":
+			// Print the help message and prompt again
+			pcd.printPromptHelp()
+		default:
+			fmt.Fprintf(pcd.stdout, "Invalid choice; enter \"help\" for help\n")
+		}
+	}
+}
+
+// printPromptHelp prints the help message for the Execute prompt.
+func (pcd *Procedure) printPromptHelp() {
+	fmt.Fprintf(pcd.stdout, `Options:
+
+[Enter]			Proceed to the next step
+help			Print this help message`)
 }
 
 // NewProcedure returns a new procedure, ready to be given steps.
