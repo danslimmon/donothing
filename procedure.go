@@ -225,7 +225,11 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 		}
 		fmt.Fprintf(pcd.stdout, "%s", strings.Replace(b.String(), "@@", "`", -1))
 
-		pcd.prompt()
+		promptResult := pcd.prompt()
+		if promptResult.SkipOne {
+			fmt.Fprintf(pcd.stdout, "Skipping step '%s' and its descendants\n", walkStep.AbsoluteName())
+			return NoRecurse
+		}
 		return nil
 	})
 
@@ -237,10 +241,12 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 //
 // Procedure.Execute uses the contents of a promptResult to decide what to do next.
 type promptResult struct {
+	// Whether to skip this step and its descendants.
+	SkipOne bool
 	// The absolute name of the next step that should be executed.
 	//
 	// If empty, Execute should proceed normally in its walk.
-	NextStep string
+	SkipTo string
 }
 
 // prompt prompts the user for the next action to take.
@@ -271,6 +277,8 @@ func (pcd *Procedure) prompt() promptResult {
 		case "help":
 			// Print the help message and prompt again
 			pcd.printPromptHelp()
+		case "skip":
+			return promptResult{SkipOne: true}
 		default:
 			fmt.Fprintf(pcd.stdout, "Invalid choice; enter \"help\" for help\n")
 		}
@@ -282,6 +290,7 @@ func (pcd *Procedure) printPromptHelp() {
 	fmt.Fprintf(pcd.stdout, `Options:
 
 [Enter]			Proceed to the next step
+skip			Skip this step and its descendants
 help			Print this help message`)
 }
 

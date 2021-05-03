@@ -1,11 +1,16 @@
 package donothing
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"sort"
 	"strings"
 )
+
+// Special error returned by Step.Walk callbacks when they want to recurse no further into a step's
+// descendants.
+var NoRecurse = errors.New("noRecurse")
 
 // A Step is an individual action to be performed as part of a procedure.
 //
@@ -288,13 +293,15 @@ func (step *Step) GetChildren() []*Step {
 // when Procedure.Execute() is called, as well as the order in which the steps are rendered into
 // documentation.
 //
-// If fn returns an error for any step, Walk immediately exits, returning that error.
+// If fn returns the error NoRecurse, the walk will not proceed into the steps's descendants, but
+// will otherwise proceed as normal. If fn returns any other error, Walk immediately aborts and
+// returns that error to the caller.
 func (step *Step) Walk(fn func(*Step) error) error {
 	if err := fn(step); err != nil {
 		return err
 	}
 	for _, childStep := range step.children {
-		if err := childStep.Walk(fn); err != nil {
+		if err := childStep.Walk(fn); err != nil && err != NoRecurse {
 			return err
 		}
 	}
