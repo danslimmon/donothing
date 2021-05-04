@@ -215,7 +215,13 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 		return err
 	}
 
+	var skipTo string
 	step.Walk(func(walkStep *Step) error {
+		if skipTo != "" && walkStep.AbsoluteName() != skipTo {
+			fmt.Fprintf(pcd.stdout, "Skipping step '%s' on the way to '%s'\n", walkStep.AbsoluteName(), skipTo)
+			return nil
+		}
+
 		tplData := NewStepTemplateData(walkStep, nil, false)
 
 		var b bytes.Buffer
@@ -230,6 +236,7 @@ func (pcd *Procedure) ExecuteStep(stepName string) error {
 			fmt.Fprintf(pcd.stdout, "Skipping step '%s' and its descendants\n", walkStep.AbsoluteName())
 			return NoRecurse
 		}
+		skipTo = promptResult.SkipTo
 		return nil
 	})
 
@@ -270,18 +277,26 @@ func (pcd *Procedure) prompt() promptResult {
 			continue
 		}
 
-		switch entry {
-		case "":
+		if entry == "" {
 			// Proceed to the next step as normal
 			return promptResult{}
-		case "help":
+		}
+		if entry == "help" {
 			// Print the help message and prompt again
 			pcd.printPromptHelp()
-		case "skip":
-			return promptResult{SkipOne: true}
-		default:
-			fmt.Fprintf(pcd.stdout, "Invalid choice; enter \"help\" for help\n")
 		}
+		if entry == "skip" {
+			return promptResult{SkipOne: true}
+		}
+		if strings.HasPrefix(entry, "skipto ") {
+			parts := strings.Split(entry, " ")
+			if len(parts) != 2 || len(parts[1]) == 0 {
+				fmt.Fprintf(pcd.stdout, "Invalid 'skipto' syntax; enter \"help\" for help\n")
+			}
+			return promptResult{SkipTo: parts[1]}
+		}
+
+		fmt.Fprintf(pcd.stdout, "Invalid choice; enter \"help\" for help\n")
 	}
 }
 
@@ -291,6 +306,7 @@ func (pcd *Procedure) printPromptHelp() {
 
 [Enter]			Proceed to the next step
 skip			Skip this step and its descendants
+skipto STEP 	Skip to the given step by absolute name
 help			Print this help message`)
 }
 
