@@ -27,11 +27,11 @@ so maybe what we need is:
     pcd.AddStep(func(step *donothing.Step) {
         step.Name("blahBlah")
         step.Short("Blah the blah blah")
-        step.Run(facts *donothing.Facts) error {
+        step.Run(func(facts *donothing.Facts) error {
             x := facts.GetInt("factX", "The value of X")
             // ... do something ...
             facts.SetInt("y", "factY")
             return nil
-        }
+        })
     })
 ```

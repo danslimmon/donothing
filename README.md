@@ -4,7 +4,7 @@
 scripting](https://blog.danslimmon.com/2019/07/15/do-nothing-scripting-the-key-to-gradual-automation/).
 Do-nothing scripting is an approach to writing procedures. It allows you to start with a documented
 manual process and gradually make it better by automating a step at a time. Do-nothing scripting
-aims to minimize the **[activation energy](https://en.wikipedia.org/wiki/Activation_energy)** for
+aims to minimize the [activation energy](https://en.wikipedia.org/wiki/Activation_energy) for
 automating steps of a manual procedure.
 
 A `donothing` script walks through a **procedure**, which comprises a sequence of **steps**. As an
@@ -109,15 +109,15 @@ func main() {
   pcd.AddStep(func(step *donothing.Step) {
     step.Name("retrieveBackupFile")
     step.Short("Retrieve the backup file")
-    step.HasStringOutput("backupFilePath")
 
-    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
+    step.Run(func(facts *donothing.Facts) error {
       filename, err := downloadBackupFile()
       if err != nil {
-        return nil, err
+        return err
       }
-      return &donothing.Outputs{"backupFilePath": filename}, nil
-    }
+      facts.SetString("backupFilePath", filename)
+      return nil
+    })
   })
   // ...
 }
@@ -154,13 +154,16 @@ Run this command to load the backup data into the database:
 [Enter] when done:
 ```
 
-This paradigm makes it easy to automate the restore procedure piece by piece.
+This paradigm makes it easy to automate the procedure piece by piece.
 
-## Inputs and outputs
+## Facts
 
-Sometimes we need to pass information from one step to another. We can do this with step **inputs**
-and **outputs**. Continuing with the database restore example, we can have the first step pass the
-name of our backup file to the second step, so that the second step can print it.
+Sometimes we need to pass information from one step to another. We can do this with **facts**. A
+fact is a uniquely named, typed value. Over the course of a procedure, `donothing` collects the
+facts produced by steps, and passes those facts along to subsequent steps.
+
+Continuing with the database restore example, we can have the first step pass the name of our backup
+file to the second step, so that the second step can print it.
 
 First, we modify the long description of the `loadBackupData` step so that it contains new,
 templated instructions.
@@ -172,7 +175,7 @@ templated instructions.
     step.Long(`
       Run this command to load the backup data into the database:
 
-          psql < {{.Input "backupFilePath"}}
+          psql < {{.Facts.GetString "backupFilePath"}}
     `)
   })
 ```
@@ -191,15 +194,15 @@ func main() {
   pcd.AddStep(func(step *donothing.Step) {
     step.Name("retrieveBackupFile")
     step.Short("Retrieve the backup file")
-    step.HasStringOutput("backupFilePath")
 
-    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
+    step.Run(func(facts *donothing.Facts) error {
       filename, err := downloadBackupFile()
       if err != nil {
         return err
       }
-      step.OutputString("backupFilePath", filename)
-    }
+      facts.SetString("backupFilePath", filename)
+      return nil
+    })
   })
 
   pcd.AddStep(func(pcd donothing.Procedure) {
@@ -208,7 +211,7 @@ func main() {
     step.Long(`
       Run this command to load the backup data into the database:
 
-          psql < {{.Input "backupFilePath"}}
+          psql < {{.Facts.GetString "backupFilePath"}}
     `)
   })
 
@@ -245,43 +248,26 @@ Run this command to load the backup data into the database:
 
 Now the user doesn't have to construct their own command for the `loadBackupData` step: they can
 just copy and paste the command they need to run. And when it comes time to automate the
-`loadBackupData` step as well, our new `Run` function can use the `backupFilePath` input:
+`loadBackupData` step as well, our new `Run` function can use the `backupFilePath` fact by
+retrieving it:
 
 ```go
 func main() {
   // ...
-
-  pcd.AddStep(func(step *donothing.Step) {
-    step.Name("retrieveBackupFile")
-    step.Short("Retrieve the backup file")
-    step.HasStringOutput("backupFilePath")
-
-    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
-      filename, err := downloadBackupFile()
-      if err != nil {
-        return nil, err
-      }
-      return &donothing.Outputs{"backupFilePath": filename}, nil
-    }
-  })
-
   pcd.AddStep(func(step *donothing.Step) {
     step.Name("loadBackupData")
     step.Short("Load the backup data into the database")
-    // This step has a required string input called `backupFilePath`
-    step.HasStringInput("backupFilePath", true)
-
-    step.Run(func(inputs *donothing.Inputs) (*donothing.Outputs, error) {
-      backupFilePath, _ := inputs.GetString("backupFilePath")
+    step.Run(func(facts *donothing.Facts) error {
+      // Second return value, discarded here, will be true iff the fact exists.
+      backupFilePath, _ := facts.GetString("backupFilePath")
       err := loadBackupData(backupFilePath)
       if err != nil {
         return err
       }
       fmt.Println("Data loaded successfully.")
-      return nil, nil
+      return nil
     }
   })
-
   // ...
 }
 ```
@@ -359,26 +345,21 @@ func main() {
 ```
 
 When we invoke our script with the `--print` flag, it will print out our whole procedure as
-Markdown:
+Markdown. By convention, a `donothing` project should contain a file called `procedure.md` with the
+most recent rendering of this Markdown.
 
-```markdown
-# Restore a database backup
+## Default CLI
 
-This is our procedure for restoring a database backup. To familiarize yourself with our database
-setup, see [the database docs](https://example.com/docs/database.html).
+Since most `donothing` scripts will have the same basic interface, there is a [default
+CLI](handle_args.go) that you can use like so:
 
-## Retrieve the backup file
+```
+func main() {
+    pcd := donothing.NewProcedure()
+    // ... set up procedure and steps ...
 
-Log in to the [storage control panel](https://example.com/storage/) and locate the latest file
-of the form "backup_YYYYMMDD.sql". Download that file to your workstation.
-
-## Load the backup data into the database
-
-Run this command to load the backup data into the database:
-
-    psql < backup_YYYYMMDD.sql
-
-## Check the restored data for consistency
-
-Log in to the database and make sure there are recent records in the events table.
+    // This function parses arguments and performs the appropriate action.
+    // Pass --help for a usage message.
+    donothing.HandleArgs(os.Args[:], pcd, "root")
+}
 ```
