@@ -81,7 +81,39 @@ func manual() *donothing.Procedure {
 //
 // In this implementation, the user will be prompted only for their phone number.
 func automated() *donothing.Procedure {
-	return nil
+	pcd := donothing.NewProcedure()
+	pcd.Short("The magic of 8")
+	pcd.Long(`
+		This procedure implements a little arithmetic trick involving some manipulation of the
+		user's phone number.
+	`)
+
+	pcd.AddStep(func(step *donothing.Step) {
+		step.Name("multiplyPhoneNumber")
+		step.Short("Multiply your phone number by 8")
+		step.InputString("PhoneNumber", true)
+		step.OutputString("PhoneNumberTimesEight", "Your phone number times 8")
+		step.Long(`
+			Treating your phone number as a single integer, multiply it by 8.
+		`)
+		step.Run(func(*donothing.Inputs) (*donothing.Outputs, error) {
+
+		})
+	})
+
+	pcd.AddStep(func(step *donothing.Step) {
+		step.Name("addDigits")
+		step.Short("Add up the digits")
+		step.InputString("PhoneNumber", true)
+		step.InputString("PhoneNumberTimesEight", true)
+		step.Long(`
+			Add up all the digits in both numbers, and then add 8 to the result. If the resulting sum
+			has more than one digit, take that sum and add up _its_ digits. Repeat until there's a single
+			digit left. That digit should be 8.
+		`)
+	})
+
+	return pcd
 }
 
 func main() {

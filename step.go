@@ -26,6 +26,8 @@ type Step struct {
 	short string
 	// The Step's long description, as set by Long()
 	long string
+	// The Step's run function, which will be called when the step is reached.
+	run func(*donothing.Inputs) (*donothing.Outputs, error)
 
 	// The Step's inputs and outputs, if any
 	inputs  []InputDef
@@ -183,6 +185,11 @@ func (step *Step) Long(s string) {
 	// Remove any common indentation of the remaining lines
 	s = step.trimCommonIndent(s)
 	step.long = s
+}
+
+// Run automates the step by providing a callback to run when the step is reached.
+func (step *Step) Run(fn func(*donothing.Inputs) (*donothing.Outputs, error)) {
+	step.run = fn
 }
 
 // trimCommonIndent removes the longest common leading whitespace string from lines in s.
